@@ -1,6 +1,6 @@
 # Phân công chính thức và kế hoạch tích hợp
 
-Cập nhật: 2026-11-06. **Tên thành viên và phạm vi gói A/B/C/D đã được người dùng phê duyệt** trong prompt cập nhật tài liệu/phân công. Kế hoạch triển khai, tên lớp/API và chi tiết hợp đồng bên dưới là đề xuất để nhóm thống nhất, không phải bằng chứng đã lập trình hoặc chạy test.
+Cập nhật: 2026-11-14. **Người dùng đã đổi gói A cho Nguyễn Xuân Hoàng Lộc và gói B cho Hồ Đức Mạnh** theo F02 trong DECISIONS; phạm vi công việc của từng gói và phân công C/D giữ nguyên. Kế hoạch triển khai, tên lớp/API và chi tiết hợp đồng bên dưới là đề xuất để nhóm thống nhất, không phải bằng chứng đã lập trình hoặc chạy test.
 
 Nguồn: [AGENTS](../AGENTS.md), [GAME_RULES](GAME_RULES.md), [DECISIONS](DECISIONS.md), [ARCHITECTURE](ARCHITECTURE.md), [DATA_MODEL](DATA_MODEL.md), [TEST_CASES](TEST_CASES.md) và [Word gốc](references/GAME_DESIGN_DOCUMENT.docx). Gameplay ưu tiên quyết định mới đã phê duyệt → Word cho phần không đổi → GAME_RULES → tài liệu kỹ thuật.
 
@@ -10,8 +10,8 @@ Phạm vi: Unity6.6/6000.6.4f1, URP, C#, bàn3D low-poly/camera cố định, UI
 
 | Thành viên | Gói chính thức | Quyền sở hữu chính |
 |---|---|---|
-| **Hồ Đức Mạnh** | **A — Core Gameplay & Economy** | GameState, điều phối/validator, Board logic, Properties/Economy, clock/thắng/nghĩa vụ |
-| **Nguyễn Xuân Hoàng Lộc** | **B — Board 3D & Visual** | Board/nhân vật/công trình presentation, camera/URP/animation, **Scene Gameplay** |
+| **Nguyễn Xuân Hoàng Lộc** | **A — Core Gameplay & Economy** | GameState, điều phối/validator, Board logic, Properties/Economy, clock/thắng/nghĩa vụ |
+| **Hồ Đức Mạnh** | **B — Board 3D & Visual** | Board/nhân vật/công trình presentation, camera/URP/animation, **Scene Gameplay** |
 | **Đinh Phương Ly** | **C — UI/UX & Event Cards** | UI/HUD/popup,14 thẻ, UI prefab, **Scene MainMenu** |
 | **Nguyễn Tiến Lộc** | **D — Characters, Skills & AI** | Catalog6 nghề, kỹ năng/điểm yếu/cooldown policy, AI và test chuyên môn |
 
@@ -19,7 +19,7 @@ Phạm vi: Unity6.6/6000.6.4f1, URP, C#, bàn3D low-poly/camera cố định, UI
 
 Không cần đợi thành viên A hoàn thành toàn bộ Core rồi B/C/D mới làm. B/C/D có thể làm catalog, mock, prefab, UI và test độc lập ngay; chỉ cần thống nhất hợp đồng trước các phần tích hợp phụ thuộc. Dữ liệu giả lập không trở thành nguồn trạng thái trận thứ hai.
 
-## 2. Hồ Đức Mạnh — Gói A: Core Gameplay & Economy
+## 2. Nguyễn Xuân Hoàng Lộc — Gói A: Core Gameplay & Economy
 
 ### Nhiệm vụ chi tiết
 
@@ -51,7 +51,7 @@ Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương �
 
 **Mở PR tích hợp khi:** shared contract được bên dùng xác nhận; test phần thay đổi đã chạy hoặc ghi rõ phần chưa chạy; không ghi state từ view; không chạm Scene B/C ngoài phạm vi được giao; các nhánh còn thiếu luật được chỉ rõ, không âm thầm mặc định.
 
-## 3. Nguyễn Xuân Hoàng Lộc — Gói B: Board 3D & Visual
+## 3. Hồ Đức Mạnh — Gói B: Board 3D & Visual
 
 ### Nhiệm vụ chi tiết
 
@@ -143,8 +143,8 @@ Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương �
 
 | Người / gói | Có thể làm ngay | Không cần đợi |
 |---|---|---|
-| Mạnh — A | Thiết kế Core/GameState, validator, công thức kinh tế và test domain | Toàn bộ visual/UI/AI thật |
-| Hoàng Lộc — B | Board32 ô, camera, dùng asset, prefab/animation mẫu với mock | Core hoàn thành toàn bộ |
+| Hoàng Lộc — A | Thiết kế Core/GameState, validator, công thức kinh tế và test domain | Toàn bộ visual/UI/AI thật |
+| Mạnh — B | Board32 ô, camera, dùng asset, prefab/animation mẫu với mock | Core hoàn thành toàn bộ |
 | Ly — C | MainMenu, UI/popup, dữ liệu14 thẻ, fixture | Scene Gameplay/Core đầy đủ |
 | Tiến Lộc — D | Catalog6 nghề, Skills/AI design, fixture và kịch bản test | Board3D hoặc mọi tính năng kinh tế xong |
 

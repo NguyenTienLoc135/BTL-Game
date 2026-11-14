@@ -1,10 +1,10 @@
 # Quyết định và câu hỏi chưa xác nhận
 
-Cập nhật: 2026-11-06. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Không có implementation hoặc test thực thi được xác nhận bởi tài liệu này.
+Cập nhật: 2026-11-14. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Không có implementation hoặc test thực thi được xác nhận bởi tài liệu này.
 
 ## 1. Nguồn thực tế và thứ tự ưu tiên
 
-1. Quyết định mới được người dùng phê duyệt rõ ràng trong prompt cập nhật tài liệu/phân công ngày2026-11-06.
+1. Quyết định mới được người dùng phê duyệt rõ ràng: gameplay ngày2026-11-06 và cập nhật người phụ trách A/B ngày2026-11-14 (F02).
 2. [Word gốc](references/GAME_DESIGN_DOCUMENT.docx) đối với luật không bị quyết định mới thay đổi.
 3. [GAME_RULES](GAME_RULES.md).
 4. [ARCHITECTURE](ARCHITECTURE.md), [DATA_MODEL](DATA_MODEL.md), [TEST_CASES](TEST_CASES.md) và tài liệu kỹ thuật khác.
@@ -17,7 +17,7 @@ Nguồn phê duyệt mới: **prompt của người dùng “Cập nhật đồn
 
 ## 2. Nhật ký phê duyệt mới
 
-Người phê duyệt: **người dùng giao việc trong chat dự án**, ngày2026-11-06. Không gán vai trò người phê duyệt cho một thành viên cụ thể khi prompt không nói.
+Người phê duyệt: **người dùng giao việc trong chat dự án**; luật gameplay/phân công ban đầu ngày2026-11-06, đổi người phụ trách A/B ngày2026-11-14. Không gán vai trò người phê duyệt cho một thành viên cụ thể khi prompt không nói.
 
 | ID | Trạng thái | Nội dung có hiệu lực |
 |---|---|---|
@@ -29,7 +29,10 @@ Người phê duyệt: **người dùng giao việc trong chat dự án**, ngày
 | Q13 | APPROVED — A | Floor thanh toán cuối cho phép tính chưa có quy tắc riêng; thuê/lãi vẫn floor; không float; phân vốn phần lẻ lớn nhất và thứ tự bậc cố định, tổng đúng tiền thực trả. P01 chỉ là hướng phá hòa chưa nêu. |
 | Q20 | APPROVED — B | Hết giờ vẫn hoàn tất lần dừng và chuỗi trực tiếp, gồm popup mua/bỏ qua/cưỡng chế/dịch chuyển/lễ hội; không gieo mới hoặc mở kỹ năng không liên quan; popup pause Human/AI; sau chuỗi chạy Q09, thắng tức thời kết thúc ngay. |
 | JAIL-03 | APPROVED — THAY WORD | Tối đa3 lượt riêng ở tù; lượt bị bắt không tính. Lượt3 thử không đôi bắt buộc200.000, được thanh lý, thiếu tiếp phá sản. Trả thành công thả cuối lượt, không đi thêm; lượt sau mới đi. Thoát sớm/đôi giữ luật thường; vẫn thu thuê. |
-| F01 | APPROVED — PHÂN CÔNG | Hồ Đức Mạnh—A Core Gameplay & Economy; Nguyễn Xuân Hoàng Lộc—B Board3D & Visual; Đinh Phương Ly—C UI/UX & Event Cards; Nguyễn Tiến Lộc—D Characters, Skills & AI. Core duy nhất ghi state; Gameplay do B, MainMenu do C. |
+| F01 | SUPERSEDED — PHÂN CÔNG 2026-11-06 | Phân công cũ: Hồ Đức Mạnh—A Core Gameplay & Economy; Nguyễn Xuân Hoàng Lộc—B Board3D & Visual; Đinh Phương Ly—C UI/UX & Event Cards; Nguyễn Tiến Lộc—D Characters, Skills & AI. Người phụ trách A/B đã được thay bằng F02; không dùng dòng này để giao việc hiện tại. |
+| F02 | APPROVED — PHÂN CÔNG 2026-11-14 | Nguyễn Xuân Hoàng Lộc—A Core Gameplay & Economy; Hồ Đức Mạnh—B Board 3D & Visual; Đinh Phương Ly—C UI/UX & Event Cards; Nguyễn Tiến Lộc—D Characters, Skills & AI. Chỉ đổi người nhận A/B; giữ nguyên nhiệm vụ, hợp đồng và ranh giới module. Core duy nhất ghi state; Gameplay do B (Mạnh), MainMenu do C (Ly). |
+
+Nguồn F02: yêu cầu của người dùng ngày2026-11-14: “nhiệm vụ A là của hoàng lộc và nhiệm vụ B là của mạnh”. F02 thay phần người phụ trách A/B của F01, không phê duyệt thêm kiến trúc hoặc thay luật gameplay.
 
 ## 3. Khác biệt với Word và cách áp dụng
 
@@ -63,7 +66,7 @@ R03 luôn phải đọc cùng ngoại lệ Q11/Q20. R10 về thời hạn đọc
 
 ## 5. Kiến trúc và hợp đồng kỹ thuật
 
-A01–A06 vẫn **ĐỀ XUẤT**, không tự phê duyệt tên lớp/API/DTO chỉ vì luật và phân công được duyệt. Một nguồn state và quyền Core ghi state là yêu cầu đã có; lựa chọn MatchCoordinator, namespace và cấu trúc DTO cụ thể cần nhóm thống nhất giai đoạn0. Phân công F01 chính thức thay bảng trách nhiệm cũ A07.
+A01–A06 vẫn **ĐỀ XUẤT**, không tự phê duyệt tên lớp/API/DTO chỉ vì luật và phân công được duyệt. Một nguồn state và quyền Core ghi state là yêu cầu đã có; lựa chọn MatchCoordinator, namespace và cấu trúc DTO cụ thể cần nhóm thống nhất giai đoạn0. Phân công hiện hành F02 cập nhật người phụ trách A/B của F01; bảng trách nhiệm cũ A07 vẫn không áp dụng.
 
 | ID | Đề xuất | Lý do và hệ quả | Trạng thái |
 |---|---|---|---|
@@ -73,7 +76,7 @@ A01–A06 vẫn **ĐỀ XUẤT**, không tự phê duyệt tên lớp/API/DTO ch
 | A04 | Catalog tĩnh bằng ít ScriptableObject, chuyển sang plain data; tiền long và tỷ lệ phân số | Tách Unity khỏi luật, không sửa SO runtime; chưa tạo asset/class | ĐỀ XUẤT |
 | A05 | Thời hạn theo ordinal lượt riêng; effect có sourcePlayerId; Banker debt có deadline riêng | Không đếm sai vì đôi; tuân thủ Q05/Q09 đã duyệt; cách biểu diễn vòng và effect khi source bị loại còn Q08/Q17 | ĐỀ XUẤT |
 | A06 | Domain chốt đường đi/xúc xắc, presentation chạy sau commit; một continuation hợp lệ | Animation không cấp tiền/rút thẻ hoặc chuyển lượt; cần kiểm tra tích hợp Unity sau này | ĐỀ XUẤT |
-| A07 | Phân chia bốn đầu mối cũ, chưa có tên | Đã được thay bằng phân công chính thức F01 trong TEAM_TASKS; không dùng lại để giao việc | SUPERSEDED |
+| A07 | Phân chia bốn đầu mối cũ, chưa có tên | Đã được thay bằng phân công chính thức trong TEAM_TASKS, hiện áp dụng F02; không dùng lại để giao việc | SUPERSEDED |
 
 ## 6. Truy vết đầy đủ Q01–Q20
 

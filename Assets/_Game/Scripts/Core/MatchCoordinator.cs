@@ -5,385 +5,285 @@ using BtlGame.Properties;
 
 namespace BtlGame.Core
 {
-    public sealed class MatchCoordinator
+    public readonly struct DiceRoll
     {
-        public GameState State { get; private set; }
-
-        public MatchCoordinator(GameState state)
+        public DiceRoll(int first, int second)
         {
-            State = state ?? throw new ArgumentNullException("state");
+            if (first < 1 || first > 6 || second < 1 || second > 6)
+                throw new ArgumentOutOfRangeException();
+            First = first;
+            Second = second;
         }
 
-        public MovementResult MoveCurrentPlayer(DiceResult dice)
+        public int First { get; }
+        public int Second { get; }
+        public int Total => First + Second;
+        public bool IsDouble => First == Second;
+    }
+
+    public sealed class MatchCoordinator
+    {
+        private readonly Func<DiceRoll> _rollDice;
+
+        public MatchCoordinator(GameState state, Func<DiceRoll> rollDice)
+        {
+            State = state ?? throw new ArgumentNullException(nameof(state));
+            _rollDice = rollDice ?? throw new ArgumentNullException(nameof(rollDice));
+        }
+
+        public GameState State { get; }
+
+        public static GameState CreateNew(IReadOnlyList<PlayerState> players, TimeLimit timeLimit)
+        {
+            if (players == null || players.Count < 2 || players.Count > 4)
+                throw new ArgumentException("A match requires two to four players.", nameof(players));
+
+            var ids = new HashSet<string>();
+            foreach (PlayerState player in players)
+            {
+                if (player == null || !ids.Add(player.PlayerId))
+                    throw new ArgumentException("Players must be non-null and have unique ids.", nameof(players));
+            }
+
+            return new GameState(BoardCatalog.AllTiles, players)
+            {
+                RemainingSeconds = timeLimit == TimeLimit.Unlimited ? 0 : (long)timeLimit * 60
+            };
+        }
+
+        public DiceRoll RollAndMove()
         {
             EnsureRunning();
-            PlayerState player = State.GetPlayer(State.CurrentPlayerId);
-            MovementResult movement = BoardRules.CalculateMovement(player.PositionTileId, dice);
+            if (State.TurnPhase != TurnPhase.AwaitingRoll)
+                throw new InvalidOperationException("The current turn is not ready to roll.");
+
+            PlayerState player = State.CurrentPlayer;
+            DiceRoll roll = _rollDice();
+            State.RollOrdinalWithinTurn++;
+
+            MovementResult movement = BoardCatalog.Move(player.PositionTileId, roll.Total);
             player.PositionTileId = movement.DestinationTileId;
-            player.Cash += movement.PassedStartCount * 100000L;
-            if (BoardCatalog.GetTile(movement.DestinationTileId).Type == TileType.Jail)
+            if (movement.StartPassCount > 0)
+                player.Cash = checked(player.Cash + movement.StartPassCount * GameConstants.StartPassMoney);
+
+            if (movement.LandedOnJail)
             {
                 player.IsJailed = true;
                 player.JailTurnsStarted = 0;
+                State.TurnPhase = TurnPhase.ResolvingLanding;
+            }
+            else
+            {
+                State.TurnPhase = TurnPhase.ResolvingLanding;
             }
 
-            State.NextLandingId++;
-            State.Commit();
-            return movement;
+            return roll;
         }
 
-        public void BuyCity(int playerId, int tileId, CityLevel level, int landingId, long actualPrice)
+        public void CompleteLanding(bool landedInJail)
         {
             EnsureRunning();
-            PlayerState buyer = State.GetPlayer(playerId);
-            BoardTile tile = BoardCatalog.GetTile(tileId);
-            PropertyState property = State.GetProperty(tileId);
-            if (tile.Type != TileType.City || property.OwnerId.HasValue || level == CityLevel.Hotel)
-            {
-                throw new InvalidOperationException("City purchase is not valid.");
-            }
+            if (State.TurnPhase != TurnPhase.ResolvingLanding)
+                throw new InvalidOperationException("A landing is not being resolved.");
 
-            long listedPrice = EconomyRules.GetPurchasePrice(tile, level);
-            ValidatePayment(buyer, actualPrice);
-            if (actualPrice != listedPrice)
-            {
-                throw new InvalidOperationException("Purchase price must match the selected listed price.");
-            }
+            if (landedInJail)
+                State.CurrentPlayer.IsJailed = true;
 
-            buyer.Cash -= actualPrice;
-            property.OwnerId = playerId;
-            property.CityLevel = level;
-            property.InvestedByTier = EconomyRules.AllocateInvestment(actualPrice, tile, level);
-            property.AcquiredOnLandingId = landingId;
-            if (level == CityLevel.House3)
-            {
-                property.House3ReachedOnLandingId = landingId;
-            }
+            State.TurnPhase = TurnPhase.AwaitingRoll;
+        }
 
-            State.Commit();
+        public void EndTurn()
+        {
+            EnsureRunning();
+            if (State.TurnPhase != TurnPhase.AwaitingRoll && State.TurnPhase != TurnPhase.ResolvingLanding)
+                throw new InvalidOperationException("The current turn still has unresolved work.");
+
+            PlayerState player = State.CurrentPlayer;
+            player.CompletedPersonalTurns++;
+            State.PersonalTurnOrdinal++;
+            State.RollOrdinalWithinTurn = 0;
+            SelectNextActivePlayer();
+            State.TurnPhase = TurnPhase.AwaitingRoll;
             CheckImmediateWin();
         }
 
-        public void BuyBeach(int playerId, int tileId, long actualPrice)
+        public void Buy(int tileId, PropertyLevel level)
         {
             EnsureRunning();
-            PlayerState buyer = State.GetPlayer(playerId);
+            PlayerState buyer = State.CurrentPlayer;
+            PropertyState property = GetProperty(tileId);
             BoardTile tile = BoardCatalog.GetTile(tileId);
-            PropertyState property = State.GetProperty(tileId);
-            if (tile.Type != TileType.Beach || property.OwnerId.HasValue || actualPrice != tile.BeachPurchasePrice)
-            {
-                throw new InvalidOperationException("Beach purchase is not valid.");
-            }
-
-            ValidatePayment(buyer, actualPrice);
-            buyer.Cash -= actualPrice;
-            property.OwnerId = playerId;
-            property.BeachActualInvestment = actualPrice;
-            State.Commit();
-            CheckImmediateWin();
-        }
-
-        public RentQuote QuoteRent(int payerId, int tileId, bool doubled)
-        {
-            PlayerState payer = State.GetPlayer(payerId);
-            PropertyState property = State.GetProperty(tileId);
-            if (!property.OwnerId.HasValue || property.OwnerId.Value == payerId)
-            {
-                throw new InvalidOperationException("Rent requires an opponent-owned property.");
-            }
-
-            BoardTile tile = BoardCatalog.GetTile(tileId);
+            if (property.IsOwned || tile.Type == TileType.Beach && level != PropertyLevel.Stake)
+                throw new InvalidOperationException("The property is not available at the requested level.");
+            long price = EconomyCalculator.PurchasePrice(tile, level);
+            Spend(buyer, price);
+            property.OwnerId = buyer.PlayerId;
+            property.Level = level;
             if (tile.Type == TileType.Beach)
-            {
-                return new RentQuote(
-                    EconomyRules.GetBeachRent(CountOwnedBeaches(property.OwnerId.Value)),
-                    0,
-                    doubled,
-                    EconomyRules.GetBeachRent(CountOwnedBeaches(property.OwnerId.Value)) * (doubled ? 2 : 1));
-            }
-
-            int modifier = 0;
-            if (OwnsAllCitiesInCountry(property.OwnerId.Value, tile.CountryId))
-            {
-                modifier += 20;
-            }
-
-            if (State.FixedFestivalCityIds.Contains(tileId))
-            {
-                modifier += 50;
-            }
-
-            return EconomyRules.QuoteCityRent(tile, property.CityLevel.Value, modifier, doubled);
-        }
-
-        public void PayRent(int payerId, int tileId, long amount)
-        {
-            EnsureRunning();
-            PlayerState payer = State.GetPlayer(payerId);
-            PropertyState property = State.GetProperty(tileId);
-            if (!property.OwnerId.HasValue || property.OwnerId.Value == payerId)
-            {
-                throw new InvalidOperationException("Rent requires an opponent-owned property.");
-            }
-
-            ValidatePayment(payer, amount);
-            payer.Cash -= amount;
-            State.GetPlayer(property.OwnerId.Value).Cash += amount;
-            State.Commit();
-        }
-
-        public void ForcePurchase(int buyerId, int tileId, int percentOfListedPrice, long actualPrice)
-        {
-            EnsureRunning();
-            PlayerState buyer = State.GetPlayer(buyerId);
-            PropertyState property = State.GetProperty(tileId);
-            BoardTile tile = BoardCatalog.GetTile(tileId);
-            if (!property.OwnerId.HasValue || property.OwnerId.Value == buyerId ||
-                tile.Type != TileType.City || property.CityLevel == CityLevel.Hotel)
-            {
-                throw new InvalidOperationException("Forced purchase is not valid.");
-            }
-
-            long expectedPrice = EconomyRules.GetForcedPurchasePrice(tile, property.CityLevel.Value, percentOfListedPrice);
-            if (actualPrice != expectedPrice)
-            {
-                throw new InvalidOperationException("Forced purchase price is incorrect.");
-            }
-
-            ValidatePayment(buyer, actualPrice);
-            int previousOwnerId = property.OwnerId.Value;
-            buyer.Cash -= actualPrice;
-            State.GetPlayer(previousOwnerId).Cash += actualPrice;
-            property.OwnerId = buyerId;
-            property.InvestedByTier = EconomyRules.AllocateInvestment(actualPrice, tile, property.CityLevel.Value);
-            property.AcquiredOnLandingId = State.NextLandingId;
-            State.Commit();
+                property.BeachInvestment = price;
+            else
+                Copy(EconomyCalculator.AllocateInvestment(price, level), property.InvestedByTier);
             CheckImmediateWin();
         }
 
-        public void UpgradeCity(int playerId, int tileId, CityLevel targetLevel, int landingId, long actualPrice)
+        public void Upgrade(int tileId, PropertyLevel target, string landingId)
         {
             EnsureRunning();
-            PlayerState player = State.GetPlayer(playerId);
+            if (string.IsNullOrWhiteSpace(landingId))
+                throw new ArgumentException("Landing id is required.", nameof(landingId));
+
+            PlayerState player = State.CurrentPlayer;
+            PropertyState property = GetOwnedProperty(tileId, player.PlayerId);
             BoardTile tile = BoardCatalog.GetTile(tileId);
-            PropertyState property = State.GetProperty(tileId);
-            if (!property.OwnerId.HasValue || property.OwnerId.Value != playerId || tile.Type != TileType.City)
-            {
-                throw new InvalidOperationException("City does not belong to the player.");
-            }
-
-            if (!property.CityLevel.HasValue || targetLevel <= property.CityLevel.Value ||
-                targetLevel == CityLevel.Hotel && property.CityLevel.Value != CityLevel.House3 ||
-                property.NormalUpgradeUsedOnLandingId == landingId)
-            {
-                throw new InvalidOperationException("Upgrade is not valid.");
-            }
-
-            if (targetLevel == CityLevel.Hotel && property.House3ReachedOnLandingId == landingId)
-            {
-                throw new InvalidOperationException("Hotel cannot be completed on the initial House 3 landing.");
-            }
-
-            long priceDifference = EconomyRules.GetListedPrice(tile, targetLevel) -
-                EconomyRules.GetListedPrice(tile, property.CityLevel.Value);
-            if (actualPrice != priceDifference)
-            {
-                throw new InvalidOperationException("Upgrade price is not the listed difference.");
-            }
-
-            ValidatePayment(player, actualPrice);
-            player.Cash -= actualPrice;
-            property.CityLevel = targetLevel;
-            property.InvestedByTier[(int)targetLevel] = actualPrice;
+            if (property.NormalUpgradeUsedOnLandingId == landingId)
+                throw new InvalidOperationException("Only one normal upgrade is allowed per landing.");
+            if (target == PropertyLevel.Hotel && property.Level != PropertyLevel.House3)
+                throw new InvalidOperationException("A hotel requires a prior House 3 landing.");
+            long price = EconomyCalculator.UpgradePrice(tile, property.Level, target);
+            Spend(player, price);
+            property.Level = target;
             property.NormalUpgradeUsedOnLandingId = landingId;
-            State.Commit();
+            if (target != PropertyLevel.Hotel)
+                property.InvestedByTier[(int)target] = checked(property.InvestedByTier[(int)target] + price);
+            else
+                property.InvestedByTier[(int)target] = price;
         }
 
-        public long SellToBank(int playerId, int tileId)
+        public long SellToBank(int tileId)
         {
             EnsureRunning();
-            PlayerState player = State.GetPlayer(playerId);
-            PropertyState property = State.GetProperty(tileId);
-            if (!property.OwnerId.HasValue || property.OwnerId.Value != playerId)
-            {
-                throw new InvalidOperationException("Property does not belong to the player.");
-            }
-
-            long payout = EconomyRules.GetSaleValue(property.TotalInvestment);
-            property.Reset();
-            player.Cash += payout;
-            State.Commit();
-            return payout;
+            PropertyState property = GetOwnedProperty(tileId, State.CurrentPlayer.PlayerId);
+            long refund = EconomyCalculator.LiquidationValue(property);
+            State.CurrentPlayer.Cash = checked(State.CurrentPlayer.Cash + refund);
+            ResetProperty(property);
+            return refund;
         }
 
-        public long PayTax(int playerId)
+        private void SelectNextActivePlayer()
         {
-            EnsureRunning();
-            PlayerState player = State.GetPlayer(playerId);
-            long listedValue = 0;
-            foreach (PropertyState property in State.GetProperties())
+            for (int offset = 1; offset <= State.Players.Count; offset++)
             {
-                if (property.OwnerId.HasValue && property.OwnerId.Value == playerId)
+                int candidate = (State.CurrentPlayerIndex + offset) % State.Players.Count;
+                if (State.Players[candidate].Status == PlayerStatus.Active)
                 {
-                    BoardTile tile = BoardCatalog.GetTile(property.TileId);
-                    if (tile.Type == TileType.Beach)
-                    {
-                        listedValue += tile.BeachPurchasePrice;
-                    }
-                    else
-                    {
-                        listedValue += EconomyRules.GetListedPrice(tile, property.CityLevel.Value);
-                    }
+                    State.CurrentPlayerIndex = candidate;
+                    return;
                 }
             }
 
-            long tax = EconomyRules.GetTax(player.Cash, listedValue);
-            ValidatePayment(player, tax);
-            player.Cash -= tax;
-            State.Commit();
-            return tax;
+            State.MatchStatus = MatchStatus.Finished;
+            State.TurnPhase = TurnPhase.Finished;
         }
 
-        public WinResult CheckImmediateWin()
+        private void CheckImmediateWin()
         {
-            List<int> winners = new List<int>();
-            foreach (PlayerState player in State.GetPlayers())
+            foreach (PlayerState player in State.Players)
             {
                 if (player.Status != PlayerStatus.Active)
-                {
                     continue;
+
+                int countries = 0;
+                foreach (string country in CountriesOwnedBy(player.PlayerId))
+                    if (country != null)
+                        countries++;
+
+                int beaches = 0;
+                foreach (PropertyState property in State.PropertiesByTileId.Values)
+                    if (property.Type == TileType.Beach && property.OwnerId == player.PlayerId)
+                        beaches++;
+
+                if (countries >= 3)
+                {
+                    Finish(player, WinReason.ThreeCountries);
+                    return;
                 }
 
-                if (OwnsAllBeaches(player.PlayerId))
+                if (beaches == 4)
                 {
-                    winners.Add(player.PlayerId);
-                    return Finish(winners, WinReason.FourBeaches);
-                }
-
-                if (OwnsThreeCountries(player.PlayerId))
-                {
-                    winners.Add(player.PlayerId);
-                    return Finish(winners, WinReason.ThreeCountries);
+                    Finish(player, WinReason.FourBeaches);
+                    return;
                 }
             }
-
-            int activeCount = 0;
-            int lastActiveId = -1;
-            foreach (PlayerState player in State.GetPlayers())
-            {
-                if (player.Status == PlayerStatus.Active)
-                {
-                    activeCount++;
-                    lastActiveId = player.PlayerId;
-                }
-            }
-
-            if (activeCount == 1)
-            {
-                winners.Add(lastActiveId);
-                return Finish(winners, WinReason.LastActivePlayer);
-            }
-
-            return new WinResult(false, winners, WinReason.None);
         }
 
-        private bool OwnsAllBeaches(int playerId)
+        private IEnumerable<string> CountriesOwnedBy(string playerId)
         {
-            int[] beaches = { 4, 14, 18, 25 };
-            for (int i = 0; i < beaches.Length; i++)
+            var all = new HashSet<string>();
+            var completeCountries = new HashSet<string>();
+            foreach (BoardTile tile in State.Board)
             {
-                if (State.GetProperty(beaches[i]).OwnerId != playerId)
-                {
-                    return false;
-                }
+                if (tile.Type == TileType.City && GetProperty(tile.Id).OwnerId == playerId)
+                    all.Add(tile.CountryId);
             }
 
-            return true;
-        }
-
-        private int CountOwnedBeaches(int playerId)
-        {
-            int count = 0;
-            int[] beaches = { 4, 14, 18, 25 };
-            for (int i = 0; i < beaches.Length; i++)
+            foreach (string country in all)
             {
-                if (State.GetProperty(beaches[i]).OwnerId == playerId)
+                bool isComplete = true;
+                foreach (BoardTile tile in State.Board)
                 {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
-        private bool OwnsAllCitiesInCountry(int playerId, string countryId)
-        {
-            if (string.IsNullOrEmpty(countryId))
-            {
-                return false;
-            }
-
-            int owned = 0;
-            foreach (PropertyState property in State.GetProperties())
-            {
-                BoardTile tile = BoardCatalog.GetTile(property.TileId);
-                if (tile.Type == TileType.City && tile.CountryId == countryId && property.OwnerId == playerId)
-                {
-                    owned++;
-                }
-            }
-
-            return owned == BoardCatalog.CountCitiesInCountry(countryId);
-        }
-
-        private bool OwnsThreeCountries(int playerId)
-        {
-            string[] countries = { "Vietnam", "Japan", "Korea", "France", "Italy", "USA", "UK", "Australia" };
-            int complete = 0;
-            for (int i = 0; i < countries.Length; i++)
-            {
-                int owned = 0;
-                int total = BoardCatalog.CountCitiesInCountry(countries[i]);
-                foreach (PropertyState property in State.GetProperties())
-                {
-                    if (property.OwnerId == playerId &&
-                        BoardCatalog.GetTile(property.TileId).CountryId == countries[i])
+                    if (tile.Type == TileType.City && tile.CountryId == country && GetProperty(tile.Id).OwnerId != playerId)
                     {
-                        owned++;
+                        isComplete = false;
+                        break;
                     }
                 }
 
-                if (owned == total)
-                {
-                    complete++;
-                }
+                if (isComplete)
+                    completeCountries.Add(country);
             }
 
-            return complete >= 3;
+            return completeCountries;
         }
 
-        private WinResult Finish(IList<int> winners, WinReason reason)
+        private void Finish(PlayerState player, WinReason reason)
         {
-            State.Status = MatchStatus.Finished;
-            State.Result = new WinResult(true, winners, reason);
-            State.Commit();
-            return State.Result;
+            State.MatchStatus = MatchStatus.Finished;
+            State.TurnPhase = TurnPhase.Finished;
+            State.WinReason = reason;
+            State.Winners = new[] { player.PlayerId };
         }
 
-        private static void ValidatePayment(PlayerState player, long amount)
+        private PropertyState GetProperty(int tileId)
+        {
+            if (!State.PropertiesByTileId.TryGetValue(tileId, out PropertyState property))
+                throw new ArgumentException("Tile is not a property.", nameof(tileId));
+            return property;
+        }
+
+        private PropertyState GetOwnedProperty(int tileId, string ownerId)
+        {
+            PropertyState property = GetProperty(tileId);
+            if (property.OwnerId != ownerId)
+                throw new InvalidOperationException("The current player does not own this property.");
+            return property;
+        }
+
+        private static void Spend(PlayerState player, long amount)
         {
             if (amount < 0 || player.Cash < amount)
-            {
-                throw new InvalidOperationException("Insufficient cash for an optional transaction.");
-            }
+                throw new InvalidOperationException("The player cannot afford this optional action.");
+            player.Cash -= amount;
+        }
+
+        private static void Copy(long[] source, long[] destination)
+        {
+            Array.Clear(destination, 0, destination.Length);
+            Array.Copy(source, destination, source.Length);
+        }
+
+        private static void ResetProperty(PropertyState property)
+        {
+            property.OwnerId = null;
+            property.Level = PropertyLevel.Unowned;
+            property.BeachInvestment = 0;
+            property.NormalUpgradeUsedOnLandingId = null;
+            Array.Clear(property.InvestedByTier, 0, property.InvestedByTier.Length);
         }
 
         private void EnsureRunning()
         {
-            if (State.Status != MatchStatus.Running)
-            {
+            if (State.MatchStatus != MatchStatus.Running)
                 throw new InvalidOperationException("The match is not running.");
-            }
         }
     }
 }
