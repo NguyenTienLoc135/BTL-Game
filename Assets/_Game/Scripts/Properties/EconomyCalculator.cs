@@ -73,7 +73,7 @@ namespace BtlGame.Properties
             if (tile.Type != TileType.City || level < PropertyLevel.Stake || level > PropertyLevel.Hotel)
                 throw new InvalidOperationException("Rent requires an owned property.");
 
-            long baseRent = tile.House3Price * RentNumerators[(int)level] / 100;
+            long baseRent = tile.House3Price * RentNumerators[(int)level] / 200;
             int percent = additivePercent;
             if (countryMonopoly)
                 percent += 20;

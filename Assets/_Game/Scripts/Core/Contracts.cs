@@ -71,6 +71,31 @@ namespace BtlGame.Core
         TimeLimit
     }
 
+    public enum ObligationKind
+    {
+        Rent,
+        Tax,
+        JailFee,
+        BankerLoan,
+        Gift
+    }
+
+    public readonly struct PendingObligation
+    {
+        public PendingObligation(string payerId, string recipientId, long amount, ObligationKind kind)
+        {
+            PayerId = payerId;
+            RecipientId = recipientId;
+            Amount = amount;
+            Kind = kind;
+        }
+
+        public string PayerId { get; }
+        public string RecipientId { get; }
+        public long Amount { get; }
+        public ObligationKind Kind { get; }
+    }
+
     public readonly struct BoardTile
     {
         public BoardTile(int id, TileType type, string displayName, string countryId, string cityCode, long house3Price, long beachPrice)
@@ -96,7 +121,7 @@ namespace BtlGame.Core
 
     public sealed class PlayerState
     {
-        public PlayerState(string id, int seatIndex, string displayName, ControllerKind controller)
+        public PlayerState(string id, int seatIndex, string displayName, ControllerKind controller, string roleId = null)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Player id is required.", nameof(id));
@@ -105,6 +130,7 @@ namespace BtlGame.Core
             SeatIndex = seatIndex;
             DisplayName = displayName ?? string.Empty;
             Controller = controller;
+            RoleId = roleId;
             Cash = GameConstants.StartingCash;
             PositionTileId = 0;
             Status = PlayerStatus.Active;
@@ -114,12 +140,15 @@ namespace BtlGame.Core
         public int SeatIndex { get; }
         public string DisplayName { get; }
         public ControllerKind Controller { get; }
+        public string RoleId { get; }
         public long Cash { get; internal set; }
         public int PositionTileId { get; internal set; }
         public PlayerStatus Status { get; internal set; }
         public bool IsJailed { get; internal set; }
         public int JailTurnsStarted { get; internal set; }
         public int CompletedPersonalTurns { get; internal set; }
+        public long OutstandingLoanAmount { get; internal set; }
+        public int LoanDueAfterCompletedTurn { get; internal set; }
     }
 
     public sealed class PropertyState
@@ -139,6 +168,9 @@ namespace BtlGame.Core
         public long[] InvestedByTier { get; }
         public long BeachInvestment { get; internal set; }
         public string NormalUpgradeUsedOnLandingId { get; internal set; }
+        public string House3ReachedOnLandingId { get; internal set; }
+        public int TemporaryFestivalTurnsRemaining { get; internal set; }
+        public int PowerCutTurnsRemaining { get; internal set; }
 
         public bool IsOwned => OwnerId != null;
     }
@@ -169,8 +201,19 @@ namespace BtlGame.Core
         public int CurrentPlayerIndex { get; internal set; }
         public int PersonalTurnOrdinal { get; internal set; }
         public int RollOrdinalWithinTurn { get; internal set; }
+        public bool ExtraRollAvailable { get; internal set; }
+        public bool TurnWasForcedToEnd { get; internal set; }
         public long RemainingSeconds { get; internal set; }
+        public bool ClockPaused { get; internal set; }
+        public string ClockPauseReason { get; internal set; }
         public bool TimeExpired { get; internal set; }
+        public PendingObligation? PendingObligation { get; internal set; }
+        public bool ObligationAdjustmentUsed { get; internal set; }
+        public bool TurnBoundaryPending { get; internal set; }
+        public IReadOnlyList<int> FixedFestivalCityIds { get; internal set; }
+        public string TeleportSourceActionId { get; internal set; }
+        public int RoundOrdinal { get; internal set; }
+        public int CompletedPlayersThisRound { get; internal set; }
         public WinReason WinReason { get; internal set; }
         public IReadOnlyList<string> Winners { get; internal set; }
 
@@ -185,5 +228,6 @@ namespace BtlGame.Core
         public const int BoardSize = 32;
         public const int InvestmentTierCount = 5;
         public const int MaximumJailTurns = 3;
+        public const int BankerInterestPercent = 1;
     }
 }
