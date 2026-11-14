@@ -1,6 +1,6 @@
 # Kiến trúc đề xuất — Cờ Tỷ Phú RPG
 
-Ngày cập nhật: 2026-11-06. **Luật mới và phân công A/B/C/D đã được người dùng phê duyệt; tên lớp/API và phương án kiến trúc cụ thể vẫn là ĐỀ XUẤT**. Chưa có implementation.
+Ngày cập nhật: 2026-11-14. **Luật mới và phân công A/B/C/D đã được người dùng phê duyệt; tên lớp/API và phương án kiến trúc cụ thể vẫn là ĐỀ XUẤT**. F02 đổi người phụ trách A sang Nguyễn Xuân Hoàng Lộc, B sang Hồ Đức Mạnh; phạm vi từng gói không đổi. Chưa có implementation.
 
 ## 1. Nguồn và phạm vi
 
@@ -37,7 +37,7 @@ Các tên dưới đây là ranh giới thư mục/namespace, chưa bắt buộc
 | AI | Heuristic chọn một lệnh hợp lệ và mục tiêu; chỉ đọc thông tin được luật cho phép | Đọc trước thẻ nếu không có Passive; gian lận tiền/xúc xắc |
 | UI | Input, popup, HUD và binding tiếng Việt; gửi lựa chọn theo yêu cầu domain | Tự tính lại giá bằng công thức khác; ghi trực tiếp runtime state |
 
-**Ranh giới chính thức:** Hồ Đức Mạnh (A) phụ trách Core + Board logic + Economy/Properties và chỉ Core được ghi state; Nguyễn Xuân Hoàng Lộc (B) phụ trách Board/Characters presentation và Scene Gameplay; Đinh Phương Ly (C) phụ trách UI, Cards và Scene MainMenu; Nguyễn Tiến Lộc (D) phụ trách Characters domain, Skills, AI. Tên “Board” không trao logic xúc xắc/ô/vị trí cho B; tên “Characters” không trao model/animation 3D cho D. C/D trả ý định và kết quả luật chuyên môn qua hợp đồng, A kiểm tra và áp dụng; A không viết lại nội dung14 thẻ hoặc6 bộ kỹ năng.
+**Ranh giới chính thức:** Nguyễn Xuân Hoàng Lộc (A) phụ trách Core + Board logic + Economy/Properties và chỉ Core được ghi state; Hồ Đức Mạnh (B) phụ trách Board/Characters presentation và Scene Gameplay; Đinh Phương Ly (C) phụ trách UI, Cards và Scene MainMenu; Nguyễn Tiến Lộc (D) phụ trách Characters domain, Skills, AI. Tên “Board” không trao logic xúc xắc/ô/vị trí cho B; tên “Characters” không trao model/animation 3D cho D. C/D trả ý định và kết quả luật chuyên môn qua hợp đồng, A kiểm tra và áp dụng; A không viết lại nội dung14 thẻ hoặc6 bộ kỹ năng.
 
 Board/Characters có thể chứa view Unity riêng trong phần Presentation của module; phần Domain không tham chiếu view. Không cần di chuyển thư mục hiện tại để áp dụng tài liệu này.
 
@@ -194,8 +194,8 @@ Phân công chính thức người dùng đã phê duyệt; xem sản phẩm bà
 
 | Thành viên / gói | Trách nhiệm chính | Điểm phối hợp |
 |---|---|---|
-| Hồ Đức Mạnh — A | Core Gameplay & Economy, Board logic, GameState, validator, nghĩa vụ/thắng/clock | Tiếp nhận ý định Cards/Skills; không triển khai trùng chuyên môn C/D |
-| Nguyễn Xuân Hoàng Lộc — B | Board3D, view quân/công trình, camera/URP, animation, Gameplay | Nhận snapshot/event; callback presentation không ghi state |
+| Nguyễn Xuân Hoàng Lộc — A | Core Gameplay & Economy, Board logic, GameState, validator, nghĩa vụ/thắng/clock | Tiếp nhận ý định Cards/Skills; không triển khai trùng chuyên môn C/D |
+| Hồ Đức Mạnh — B | Board3D, view quân/công trình, camera/URP, animation, Gameplay | Nhận snapshot/event; callback presentation không ghi state |
 | Đinh Phương Ly — C | UI/UX,14 thẻ, MainMenu, HUD/popup và UI prefab | Gửi quyết định/thẻ qua Core; B gắn prefab vào Gameplay |
 | Nguyễn Tiến Lộc — D |6 nghề, Skills, cooldown/effect policy, AI | Định nghĩa ý định/modifier; Core áp dụng và đếm mốc; AI chọn lệnh hợp lệ |
 
