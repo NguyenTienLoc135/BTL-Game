@@ -53,11 +53,32 @@ namespace BtlGame.Tests
                 new[] { 1, 5, 9 });
             var coordinator = new MatchCoordinator(state, () => new DiceRoll(1, 1));
 
-            coordinator.Buy(1, PropertyLevel.House1);
-            coordinator.Upgrade(1, PropertyLevel.House3, "landing-1");
+            coordinator.RollAndMove();
+            coordinator.Buy(2, PropertyLevel.House1);
+            coordinator.Upgrade(2, PropertyLevel.House3, "landing-1");
 
-            CollectionAssert.AreEqual(new long[] { 40000, 20000, 20000, 20000, 0 },
-                state.PropertiesByTileId[1].InvestedByTier);
+            CollectionAssert.AreEqual(new long[] { 56000, 28000, 28000, 28000, 0 },
+                state.PropertiesByTileId[2].InvestedByTier);
+        }
+
+        [Test]
+        public void BuyRejectsRemotePurchaseBeforeChargingThePlayer()
+        {
+            PlayerState player = new PlayerState("A", 0, "A", ControllerKind.Human);
+            var state = MatchCoordinator.CreateNew(
+                new List<PlayerState>
+                {
+                    player,
+                    new PlayerState("B", 1, "B", ControllerKind.Ai)
+                },
+                TimeLimit.Unlimited,
+                new[] { 1, 5, 9 });
+            var coordinator = new MatchCoordinator(state, () => new DiceRoll(1, 1));
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => coordinator.Buy(1, PropertyLevel.Stake));
+            Assert.AreEqual(GameConstants.StartingCash, player.Cash);
+            Assert.IsFalse(state.PropertiesByTileId[1].IsOwned);
         }
 
         [Test]
@@ -75,6 +96,51 @@ namespace BtlGame.Tests
             CollectionAssert.AllItemsAreUnique(state.FixedFestivalCityIds);
             foreach (int tileId in state.FixedFestivalCityIds)
                 Assert.AreEqual(TileType.City, BoardCatalog.GetTile(tileId).Type);
+        }
+
+        [Test]
+        public void TemporaryFestivalDoesNotConsumeTheActivatingTurn()
+        {
+            PlayerState player = new PlayerState("A", 0, "A", ControllerKind.Human);
+            var state = MatchCoordinator.CreateNew(
+                new List<PlayerState>
+                {
+                    player,
+                    new PlayerState("B", 1, "B", ControllerKind.Ai)
+                },
+                TimeLimit.Unlimited,
+                new[] { 1, 5, 9 });
+            var coordinator = new MatchCoordinator(state, () => new DiceRoll(1, 1));
+
+            coordinator.RollAndMove();
+            coordinator.Buy(2, PropertyLevel.Stake);
+            coordinator.CreateTemporaryFestival(2);
+            coordinator.EndTurn();
+
+            Assert.AreEqual(2, state.PropertiesByTileId[2].TemporaryFestivalTurnsRemaining);
+        }
+
+        [Test]
+        public void BankruptcyRejectsPayerWhoCanStillSettle()
+        {
+            PlayerState player = new PlayerState("A", 0, "A", ControllerKind.Human);
+            var state = MatchCoordinator.CreateNew(
+                new List<PlayerState>
+                {
+                    player,
+                    new PlayerState("B", 1, "B", ControllerKind.Ai)
+                },
+                TimeLimit.Unlimited,
+                new[] { 1, 5, 9 });
+            var coordinator = new MatchCoordinator(state, () => new DiceRoll(1, 1));
+
+            coordinator.RollAndMove();
+            coordinator.Buy(2, PropertyLevel.House3);
+            coordinator.AssessTax(false);
+
+            Assert.Throws<System.InvalidOperationException>(
+                () => coordinator.MarkCurrentPlayerBankrupt());
+            Assert.AreEqual(PlayerStatus.Active, player.Status);
         }
 
         private static int CountTiles(TileType type)

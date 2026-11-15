@@ -108,6 +108,8 @@ namespace BtlGame.Core
         {
             EnsureRunning();
             EnsureNoObligation();
+            if (State.TimeExpired)
+                throw new InvalidOperationException("The time limit has expired; finish the current landing chain.");
             PlayerState player = State.CurrentPlayer;
             if (!player.IsJailed)
                 throw new InvalidOperationException("The current player is not jailed.");
@@ -275,6 +277,7 @@ namespace BtlGame.Core
             EnsureRunning();
             EnsureNoObligation();
             PlayerState buyer = State.CurrentPlayer;
+            EnsurePropertyActionWindow(tileId);
             PropertyState property = GetProperty(tileId);
             BoardTile tile = BoardCatalog.GetTile(tileId);
             if (property.IsOwned || tile.Type == TileType.Beach && level != PropertyLevel.Stake)
@@ -304,6 +307,8 @@ namespace BtlGame.Core
 
             Spend(State.CurrentPlayer, 200000);
             property.TemporaryFestivalTurnsRemaining = 2;
+            property.TemporaryFestivalActivatedOnCompletedTurn =
+                State.CurrentPlayer.CompletedPersonalTurns;
         }
 
         public void TakeBankerLoan()
@@ -325,6 +330,8 @@ namespace BtlGame.Core
             EnsureNoObligation();
             if (State.CurrentPlayer.PositionTileId != 24 || string.IsNullOrWhiteSpace(actionId))
                 throw new InvalidOperationException("Teleport requires the current player to be on tile 24.");
+            if (!BoardCatalog.IsValidTileId(destinationTileId))
+                throw new ArgumentOutOfRangeException(nameof(destinationTileId));
             if (destinationTileId == 24)
                 throw new InvalidOperationException("Teleport cannot target its own source tile.");
             if (State.TeleportSourceActionId == actionId)
@@ -372,6 +379,7 @@ namespace BtlGame.Core
             {
                 property.PowerCutTurnsRemaining = 0;
                 property.PowerCutSourcePlayerId = null;
+                property.PowerCutActivatedOnCompletedTurn = -1;
             }
         }
 
@@ -432,6 +440,7 @@ namespace BtlGame.Core
             Copy(EconomyCalculator.AllocateInvestment(price, property.Level), property.InvestedByTier);
             property.PowerCutTurnsRemaining = 0;
             property.PowerCutSourcePlayerId = null;
+            property.PowerCutActivatedOnCompletedTurn = -1;
             CheckImmediateWin();
         }
 
@@ -568,11 +577,21 @@ namespace BtlGame.Core
         public void MarkCurrentPlayerBankrupt()
         {
             EnsureRunning();
-            if (!State.PendingObligation.HasValue)
+            if (!State.PendingObligation.HasValue ||
+                State.PendingObligation.Value.Amount <= 0)
                 throw new InvalidOperationException("Bankruptcy requires a pending obligation.");
 
-            PlayerState player = FindPlayer(State.PendingObligation.Value.PayerId);
-            string recipientId = State.PendingObligation.Value.RecipientId;
+            PendingObligation obligation = State.PendingObligation.Value;
+            PlayerState player = FindPlayer(obligation.PayerId);
+            if (player.Cash >= obligation.Amount)
+                throw new InvalidOperationException("The payer can settle the pending obligation.");
+            foreach (PropertyState property in State.PropertiesByTileId.Values)
+            {
+                if (property.OwnerId == player.PlayerId)
+                    throw new InvalidOperationException("The payer must liquidate all remaining assets first.");
+            }
+
+            string recipientId = obligation.RecipientId;
             if (recipientId != null && player.Cash > 0)
                 FindPlayer(recipientId).Cash = checked(FindPlayer(recipientId).Cash + player.Cash);
             foreach (PropertyState property in State.PropertiesByTileId.Values)
@@ -640,6 +659,8 @@ namespace BtlGame.Core
 
             property.PowerCutTurnsRemaining = 3;
             property.PowerCutSourcePlayerId = State.CurrentPlayer.PlayerId;
+            property.PowerCutActivatedOnCompletedTurn =
+                State.CurrentPlayer.CompletedPersonalTurns;
         }
 
         private MovementResult MoveCurrentPlayer(DiceRoll roll)
@@ -683,13 +704,25 @@ namespace BtlGame.Core
         {
             foreach (PropertyState property in State.PropertiesByTileId.Values)
             {
-                if (property.OwnerId == player.PlayerId && property.TemporaryFestivalTurnsRemaining > 0)
+                if (property.OwnerId == player.PlayerId &&
+                    property.TemporaryFestivalTurnsRemaining > 0 &&
+                    property.TemporaryFestivalActivatedOnCompletedTurn + 1 != player.CompletedPersonalTurns)
+                {
                     property.TemporaryFestivalTurnsRemaining--;
-                if (property.PowerCutSourcePlayerId == player.PlayerId && property.PowerCutTurnsRemaining > 0)
+                    if (property.TemporaryFestivalTurnsRemaining == 0)
+                        property.TemporaryFestivalActivatedOnCompletedTurn = -1;
+                }
+
+                if (property.PowerCutSourcePlayerId == player.PlayerId &&
+                    property.PowerCutTurnsRemaining > 0 &&
+                    property.PowerCutActivatedOnCompletedTurn + 1 != player.CompletedPersonalTurns)
                 {
                     property.PowerCutTurnsRemaining--;
                     if (property.PowerCutTurnsRemaining == 0)
+                    {
                         property.PowerCutSourcePlayerId = null;
+                        property.PowerCutActivatedOnCompletedTurn = -1;
+                    }
                 }
             }
 
@@ -930,8 +963,10 @@ namespace BtlGame.Core
             property.NormalUpgradeUsedOnLandingId = null;
             property.House3ReachedOnLandingId = null;
             property.TemporaryFestivalTurnsRemaining = 0;
+            property.TemporaryFestivalActivatedOnCompletedTurn = -1;
             property.PowerCutTurnsRemaining = 0;
             property.PowerCutSourcePlayerId = null;
+            property.PowerCutActivatedOnCompletedTurn = -1;
             Array.Clear(property.InvestedByTier, 0, property.InvestedByTier.Length);
         }
 
@@ -945,6 +980,15 @@ namespace BtlGame.Core
         {
             if (State.TurnPhase != phase)
                 throw new InvalidOperationException("The current turn is in an invalid phase.");
+        }
+
+        private void EnsurePropertyActionWindow(int tileId)
+        {
+            if (State.CurrentPlayer.PositionTileId != tileId)
+                throw new InvalidOperationException("The player must be standing on the property.");
+            if (State.TurnPhase != TurnPhase.ResolvingLanding &&
+                State.TurnPhase != TurnPhase.AwaitingDecision)
+                throw new InvalidOperationException("Property purchase is only allowed while resolving a landing.");
         }
 
         private void EnsureRunning()

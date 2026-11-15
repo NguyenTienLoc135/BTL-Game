@@ -171,8 +171,10 @@ namespace BtlGame.Core
         public string NormalUpgradeUsedOnLandingId { get; internal set; }
         public string House3ReachedOnLandingId { get; internal set; }
         public int TemporaryFestivalTurnsRemaining { get; internal set; }
+        public int TemporaryFestivalActivatedOnCompletedTurn { get; internal set; } = -1;
         public int PowerCutTurnsRemaining { get; internal set; }
         public string PowerCutSourcePlayerId { get; internal set; }
+        public int PowerCutActivatedOnCompletedTurn { get; internal set; } = -1;
 
         public bool IsOwned => OwnerId != null;
     }
