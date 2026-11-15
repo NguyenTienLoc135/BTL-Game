@@ -109,3 +109,23 @@ Packages/ ProjectSettings/
 3. Thay đổi tối thiểu và có thể kiểm tra, theo kiến trúc hiện tại; không tự tạo tính năng ngoài scope.
 4. Kiểm tra compile/test có thể chạy; không được nói "đã chạy Unity" nếu chưa thực sự chạy.
 5. Báo cáo ngắn gọn kết quả và bước xác minh thủ công nếu cần; dừng đúng phạm vi được giao.
+
+## Code Review Guidelines
+
+### Review Language
+
+- All code review comments MUST be written in Vietnamese.
+- Explain bugs, risks, impacts, and suggested fixes in Vietnamese.
+- Keep class names, method names, variable names, file paths, and code snippets in their original language.
+- Use clear, concise Vietnamese suitable for a university Unity/C# development team.
+
+### Review Priorities
+
+- Check gameplay logic against docs/GAME_RULES.md and docs/DECISIONS.md.
+- Check architecture against docs/ARCHITECTURE.md and docs/DATA_MODEL.md.
+- Pay special attention to turn progression, jail rules, money calculations, bankruptcy, character skills, and AI decisions.
+- Report only actionable issues supported by code evidence.
+- Identify severity: P0, P1, P2, or P3.
+- For each issue, explain why it is wrong, a scenario that reproduces it, and how to fix it.
+- Recommend regression tests for gameplay bugs.
+- Do not claim tests passed unless they were executed.
