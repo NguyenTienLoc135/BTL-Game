@@ -39,6 +39,9 @@ namespace BtlGame.Core
         {
             if (players == null || players.Count < 2 || players.Count > 4)
                 throw new ArgumentException("A match requires two to four players.", nameof(players));
+            if (timeLimit != TimeLimit.Unlimited && timeLimit != TimeLimit.Minutes30 &&
+                timeLimit != TimeLimit.Minutes45 && timeLimit != TimeLimit.Minutes60)
+                throw new ArgumentOutOfRangeException(nameof(timeLimit));
 
             var ids = new HashSet<string>();
             foreach (PlayerState player in players)
@@ -47,12 +50,13 @@ namespace BtlGame.Core
                     throw new ArgumentException("Players must be non-null and have unique ids.", nameof(players));
             }
 
-            return new GameState(BoardCatalog.AllTiles, players)
+            var state = new GameState(BoardCatalog.AllTiles, players)
             {
                 RemainingSeconds = timeLimit == TimeLimit.Unlimited ? 0 : (long)timeLimit * 60,
-                RoundOrdinal = 1,
-                FixedFestivalCityIds = new[] { 1, 5, 9 }
+                RoundOrdinal = 1
             };
+            state.FixedFestivalCityIds = SelectFestivalCities();
+            return state;
         }
 
         public static GameState CreateNew(
@@ -124,6 +128,7 @@ namespace BtlGame.Core
 
             if (!roll.IsDouble && player.JailTurnsStarted >= GameConstants.MaximumJailTurns)
             {
+                player.JailReleaseAtTurnEnd = true;
                 SetPendingObligation(new PendingObligation(
                     player.PlayerId, null, GameConstants.JailFee, ObligationKind.JailFee));
                 State.ExtraRollAvailable = false;
@@ -147,6 +152,7 @@ namespace BtlGame.Core
             if (!player.IsJailed || State.TurnPhase != TurnPhase.AwaitingRoll)
                 throw new InvalidOperationException("The current player cannot pay a jail fee now.");
 
+            BeginJailTurn(player);
             SetPendingObligation(new PendingObligation(player.PlayerId, null, GameConstants.JailFee, ObligationKind.JailFee));
             ResolvePendingObligation();
         }
@@ -158,10 +164,12 @@ namespace BtlGame.Core
             if (!player.IsJailed || State.TurnPhase != TurnPhase.AwaitingRoll)
                 throw new InvalidOperationException("The current player cannot use a jail card now.");
 
+            BeginJailTurn(player);
             player.IsJailed = false;
             player.JailTurnsStarted = 0;
-            State.TurnWasForcedToEnd = true;
-            EndTurnInternal();
+            player.JailReleaseAtTurnEnd = false;
+            State.TurnWasForcedToEnd = false;
+            State.TurnPhase = TurnPhase.AwaitingRoll;
         }
 
         public void CompleteLanding(bool landedInJail)
@@ -265,6 +273,7 @@ namespace BtlGame.Core
         public void Buy(int tileId, PropertyLevel level, string landingId)
         {
             EnsureRunning();
+            EnsureNoObligation();
             PlayerState buyer = State.CurrentPlayer;
             PropertyState property = GetProperty(tileId);
             BoardTile tile = BoardCatalog.GetTile(tileId);
@@ -287,6 +296,7 @@ namespace BtlGame.Core
         public void CreateTemporaryFestival(int tileId)
         {
             EnsureRunning();
+            EnsureNoObligation();
             BoardTile tile = BoardCatalog.GetTile(tileId);
             PropertyState property = GetOwnedProperty(tileId, State.CurrentPlayer.PlayerId);
             if (tile.Type != TileType.City || property.TemporaryFestivalTurnsRemaining > 0)
@@ -299,6 +309,7 @@ namespace BtlGame.Core
         public void TakeBankerLoan()
         {
             EnsureRunning();
+            EnsureNoObligation();
             PlayerState player = State.CurrentPlayer;
             if (player.RoleId != "Banker" || player.OutstandingLoanAmount != 0)
                 throw new InvalidOperationException("Only a Banker without an existing loan can borrow.");
@@ -311,6 +322,7 @@ namespace BtlGame.Core
         public MovementResult UseTeleport(int destinationTileId, string actionId)
         {
             EnsureRunning();
+            EnsureNoObligation();
             if (State.CurrentPlayer.PositionTileId != 24 || string.IsNullOrWhiteSpace(actionId))
                 throw new InvalidOperationException("Teleport requires the current player to be on tile 24.");
             if (destinationTileId == 24)
@@ -337,6 +349,7 @@ namespace BtlGame.Core
         public void Upgrade(int tileId, PropertyLevel target, string landingId)
         {
             EnsureRunning();
+            EnsureNoObligation();
             if (string.IsNullOrWhiteSpace(landingId))
                 throw new ArgumentException("Landing id is required.", nameof(landingId));
 
@@ -351,27 +364,58 @@ namespace BtlGame.Core
 
             long price = EconomyCalculator.UpgradePrice(tile, property.Level, target);
             Spend(player, price);
+            PropertyLevel previousLevel = property.Level;
             property.Level = target;
             property.NormalUpgradeUsedOnLandingId = landingId;
-            if (target != PropertyLevel.Hotel)
-                property.InvestedByTier[(int)target] = checked(property.InvestedByTier[(int)target] + price);
-            else
-                property.InvestedByTier[(int)target] = price;
+            AddUpgradeInvestment(property, previousLevel, target, price);
+            if (target == PropertyLevel.Hotel)
+            {
+                property.PowerCutTurnsRemaining = 0;
+                property.PowerCutSourcePlayerId = null;
+            }
         }
 
         public long SellToBank(int tileId)
         {
+            return SellToBank(tileId, State.CurrentPlayer.PlayerId);
+        }
+
+        public long SellToBank(int tileId, string ownerId)
+        {
             EnsureRunning();
-            PropertyState property = GetOwnedProperty(tileId, State.CurrentPlayer.PlayerId);
+            if (string.IsNullOrWhiteSpace(ownerId))
+                throw new ArgumentException("Owner id is required.", nameof(ownerId));
+            PropertyState property = GetOwnedProperty(tileId, ownerId);
             long refund = EconomyCalculator.LiquidationValue(property);
-            State.CurrentPlayer.Cash = checked(State.CurrentPlayer.Cash + refund);
+            PlayerState owner = FindPlayer(ownerId);
+            owner.Cash = checked(owner.Cash + refund);
             ResetProperty(property);
             return refund;
+        }
+
+        public long LiquidatePropertyToCover(int tileId)
+        {
+            return LiquidatePropertyToCover(tileId, State.CurrentPlayer.PlayerId);
+        }
+
+        public long LiquidatePropertyToCover(int tileId, string payerId)
+        {
+            EnsureRunning();
+            if (!State.PendingObligation.HasValue)
+                throw new InvalidOperationException("There is no obligation to cover.");
+
+            PendingObligation obligation = State.PendingObligation.Value;
+            if (obligation.PayerId != payerId)
+                throw new InvalidOperationException("Only the obligation payer can choose liquidation.");
+            return SellToBank(tileId, payerId);
         }
 
         public void ForcePurchase(int tileId, int percentOfListedPrice)
         {
             EnsureRunning();
+            EnsureNoObligation();
+            if (percentOfListedPrice != 150 && percentOfListedPrice != 200)
+                throw new ArgumentOutOfRangeException(nameof(percentOfListedPrice));
             PropertyState property = GetProperty(tileId);
             if (!property.IsOwned || property.Type != TileType.City || property.Level == PropertyLevel.Hotel)
                 throw new InvalidOperationException("Only an opponent city below Hotel can be force-purchased.");
@@ -386,6 +430,8 @@ namespace BtlGame.Core
             property.OwnerId = State.CurrentPlayer.PlayerId;
             Array.Clear(property.InvestedByTier, 0, property.InvestedByTier.Length);
             Copy(EconomyCalculator.AllocateInvestment(price, property.Level), property.InvestedByTier);
+            property.PowerCutTurnsRemaining = 0;
+            property.PowerCutSourcePlayerId = null;
             CheckImmediateWin();
         }
 
@@ -443,7 +489,8 @@ namespace BtlGame.Core
         public void ReducePendingObligation(int reductionPercent)
         {
             EnsureRunning();
-            if (!State.PendingObligation.HasValue || State.ObligationAdjustmentUsed ||
+            if (!State.PendingObligation.HasValue || State.PendingObligation.Value.Amount == 0 ||
+                State.ObligationAdjustmentUsed ||
                 reductionPercent <= 0 || reductionPercent >= 100)
                 throw new InvalidOperationException("The obligation cannot be adjusted.");
 
@@ -457,7 +504,8 @@ namespace BtlGame.Core
         public void WaivePendingObligation()
         {
             EnsureRunning();
-            if (!State.PendingObligation.HasValue || State.ObligationAdjustmentUsed)
+            if (!State.PendingObligation.HasValue || State.PendingObligation.Value.Amount == 0 ||
+                State.ObligationAdjustmentUsed)
                 throw new InvalidOperationException("The obligation cannot be waived.");
 
             PendingObligation current = State.PendingObligation.Value;
@@ -499,12 +547,22 @@ namespace BtlGame.Core
             {
                 payer.IsJailed = false;
                 payer.JailTurnsStarted = 0;
-                State.TurnWasForcedToEnd = true;
-                EndTurnInternal();
+                if (payer.JailReleaseAtTurnEnd)
+                {
+                    payer.JailReleaseAtTurnEnd = false;
+                    State.TurnWasForcedToEnd = true;
+                    EndTurnInternal();
+                }
+                else
+                {
+                    payer.JailReleaseAtTurnEnd = false;
+                    State.TurnWasForcedToEnd = false;
+                    State.TurnPhase = TurnPhase.AwaitingRoll;
+                }
                 return;
             }
             if (State.TurnPhase == TurnPhase.AwaitingObligation)
-                State.TurnPhase = TurnPhase.AwaitingRoll;
+                State.TurnPhase = State.PendingObligationReturnPhase;
         }
 
         public void MarkCurrentPlayerBankrupt()
@@ -530,8 +588,10 @@ namespace BtlGame.Core
             State.PendingObligation = null;
             State.ObligationAdjustmentUsed = false;
             CheckImmediateWin();
-            if (State.MatchStatus == MatchStatus.Running)
+            if (State.MatchStatus == MatchStatus.Running && player.PlayerId == State.CurrentPlayer.PlayerId)
                 EndTurnInternal();
+            else if (State.MatchStatus == MatchStatus.Running)
+                State.TurnPhase = State.PendingObligationReturnPhase;
         }
 
         public long DamageProperty(int tileId)
@@ -541,6 +601,8 @@ namespace BtlGame.Core
             if (!property.IsOwned || property.Type != TileType.City ||
                 property.Level == PropertyLevel.Stake || property.Level == PropertyLevel.Hotel)
                 throw new InvalidOperationException("Damage requires an opponent city at House 1-3.");
+            if (property.OwnerId == State.CurrentPlayer.PlayerId)
+                throw new InvalidOperationException("Damage requires an opponent city.");
 
             long lostCapital = property.InvestedByTier[(int)property.Level];
             property.InvestedByTier[(int)property.Level] = 0;
@@ -555,6 +617,8 @@ namespace BtlGame.Core
             if (!property.IsOwned || property.Type != TileType.City ||
                 property.Level == PropertyLevel.Hotel)
                 throw new InvalidOperationException("Property destruction requires an opponent city below Hotel.");
+            if (property.OwnerId == State.CurrentPlayer.PlayerId)
+                throw new InvalidOperationException("Property destruction requires an opponent city.");
 
             long refund = EconomyCalculator.DamageRefund(property);
             PlayerState owner = FindPlayer(property.OwnerId);
@@ -571,8 +635,11 @@ namespace BtlGame.Core
             if (!property.IsOwned || property.Type != TileType.City ||
                 property.Level == PropertyLevel.Hotel)
                 throw new InvalidOperationException("Power cut requires an opponent city below Hotel.");
+            if (property.OwnerId == State.CurrentPlayer.PlayerId)
+                throw new InvalidOperationException("Power cut requires an opponent city.");
 
             property.PowerCutTurnsRemaining = 3;
+            property.PowerCutSourcePlayerId = State.CurrentPlayer.PlayerId;
         }
 
         private MovementResult MoveCurrentPlayer(DiceRoll roll)
@@ -618,9 +685,20 @@ namespace BtlGame.Core
             {
                 if (property.OwnerId == player.PlayerId && property.TemporaryFestivalTurnsRemaining > 0)
                     property.TemporaryFestivalTurnsRemaining--;
-                if (property.OwnerId == player.PlayerId && property.PowerCutTurnsRemaining > 0)
+                if (property.PowerCutSourcePlayerId == player.PlayerId && property.PowerCutTurnsRemaining > 0)
+                {
                     property.PowerCutTurnsRemaining--;
+                    if (property.PowerCutTurnsRemaining == 0)
+                        property.PowerCutSourcePlayerId = null;
+                }
             }
+
+        }
+
+        private static void BeginJailTurn(PlayerState player)
+        {
+            if (player.JailTurnsStarted == 0)
+                player.JailTurnsStarted = 1;
         }
 
         private void ApplyBankerInterestIfRoundComplete()
@@ -764,6 +842,7 @@ namespace BtlGame.Core
         {
             if (obligation.Amount < 0 || State.PendingObligation.HasValue)
                 throw new InvalidOperationException("An obligation is already pending or invalid.");
+            State.PendingObligationReturnPhase = State.TurnPhase;
             State.PendingObligation = obligation;
             State.TurnPhase = TurnPhase.AwaitingObligation;
         }
@@ -814,6 +893,35 @@ namespace BtlGame.Core
             Array.Copy(source, destination, source.Length);
         }
 
+        private static void AddUpgradeInvestment(
+            PropertyState property,
+            PropertyLevel previousLevel,
+            PropertyLevel target,
+            long amount)
+        {
+            int firstTier = (int)previousLevel + 1;
+            int tierCount = (int)target - (int)previousLevel;
+            long[] allocation = EconomyCalculator.AllocateInvestmentForTiers(amount, firstTier, tierCount);
+            for (int i = 0; i < allocation.Length; i++)
+                property.InvestedByTier[firstTier + i] = checked(
+                    property.InvestedByTier[firstTier + i] + allocation[i]);
+        }
+
+        private static IReadOnlyList<int> SelectFestivalCities()
+        {
+            var cities = new List<int>(BoardCatalog.CityTileIds);
+            var random = new Random();
+            for (int i = cities.Count - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                int swap = cities[i];
+                cities[i] = cities[j];
+                cities[j] = swap;
+            }
+
+            return cities.GetRange(0, 3);
+        }
+
         private static void ResetProperty(PropertyState property)
         {
             property.OwnerId = null;
@@ -823,6 +931,7 @@ namespace BtlGame.Core
             property.House3ReachedOnLandingId = null;
             property.TemporaryFestivalTurnsRemaining = 0;
             property.PowerCutTurnsRemaining = 0;
+            property.PowerCutSourcePlayerId = null;
             Array.Clear(property.InvestedByTier, 0, property.InvestedByTier.Length);
         }
 

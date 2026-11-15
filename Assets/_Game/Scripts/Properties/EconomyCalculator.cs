@@ -165,12 +165,58 @@ namespace BtlGame.Properties
             return result;
         }
 
+        public static long[] AllocateInvestmentForTiers(long amount, int firstTier, int tierCount)
+        {
+            if (amount < 0)
+                throw new ArgumentOutOfRangeException(nameof(amount));
+            if (firstTier < 0 || tierCount < 1 ||
+                firstTier + tierCount > GameConstants.InvestmentTierCount)
+                throw new ArgumentOutOfRangeException(nameof(firstTier));
+
+            long denominator = 0;
+            var weights = new long[tierCount];
+            for (int i = 0; i < tierCount; i++)
+            {
+                int tier = firstTier + i;
+                weights[i] = LevelPriceNumerators[tier] -
+                    (tier == 0 ? 0 : LevelPriceNumerators[tier - 1]);
+                denominator += weights[i];
+            }
+
+            var result = new long[tierCount];
+            var remainders = new long[tierCount];
+            long allocated = 0;
+            for (int i = 0; i < tierCount; i++)
+            {
+                long product = checked(amount * weights[i]);
+                result[i] = product / denominator;
+                remainders[i] = product % denominator;
+                allocated += result[i];
+            }
+
+            while (allocated < amount)
+            {
+                int best = 0;
+                for (int i = 1; i < tierCount; i++)
+                {
+                    if (remainders[i] > remainders[best])
+                        best = i;
+                }
+
+                result[best]++;
+                remainders[best] = -1;
+                allocated++;
+            }
+
+            return result;
+        }
+
         private static long ApplyMultiplier(long baseAmount, int additivePercent, bool doubled)
         {
             if (additivePercent < -100)
                 throw new ArgumentOutOfRangeException(nameof(additivePercent));
-            long adjusted = checked(baseAmount * (100L + additivePercent) / 100L);
-            return doubled ? checked(adjusted * 2) : adjusted;
+            long multiplier = doubled ? 2L : 1L;
+            return checked(baseAmount * (100L + additivePercent) * multiplier / 100L);
         }
 
         private static long Sum(IEnumerable<long> values)

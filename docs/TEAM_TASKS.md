@@ -41,7 +41,7 @@ Không cần đợi thành viên A hoàn thành toàn bộ Core rồi B/C/D mớ
 | Bộ điều phối, validator và hợp đồng action/result/event | Cùng lệnh Human/AI cho cùng kết quả; lệnh lỗi không trừ tiền/tiêu tài nguyên |
 | Bộ tính toán kinh tế và sổ vốn | Thuê/thuế/mua/nâng/cưỡng chế/bán/hoàn vốn đúng công thức và không mất đồng |
 | Lifecycle lượt/vòng/clock/tù/thắng | Q04/05/06/09/11/13/20, JAIL-03; callback không áp dụng hai lần |
-| Test domain và hướng dẫn tích hợp | Có lệnh chạy/test result thực tế khi triển khai; hiện mới là đặc tả |
+| Test domain và hướng dẫn tích hợp | Đã có test domain tập trung trong `Assets/_Game/Tests/Editor`; compile plain C# đã kiểm tra, Unity Test Runner chưa chạy trong môi trường này |
 
 Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương ứng trong TEST_CASES; C/D cung cấp fixture tác động thẻ/kỹ năng. Những ca PENDING chỉ kiểm tra phần đã rõ, không tự điền oracle.
 

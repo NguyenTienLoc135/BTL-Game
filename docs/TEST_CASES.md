@@ -1,6 +1,6 @@
 # Đặc tả test — Cờ Tỷ Phú RPG
 
-Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc Unity; không có trạng thái PASS.** Nguồn: quyết định người dùng mới đã phê duyệt → [Word đã đọc](references/GAME_DESIGN_DOCUMENT.docx) → [GAME_RULES](GAME_RULES.md) → các tài liệu kỹ thuật. Bảy Q và tù3 lượt cập nhật theo [DECISIONS](DECISIONS.md).
+Ngày cập nhật: 2026-11-06. **Đã có test domain tập trung cho gói A tại `Assets/_Game/Tests/Editor/CoreRulesTests.cs`; chưa chạy Unity Test Runner hoặc Unity Editor trong môi trường này.** Các bảng dưới vẫn là oracle đặc tả, không tự chuyển toàn bộ thành PASS. Nguồn: quyết định người dùng mới đã phê duyệt → [Word đã đọc](references/GAME_DESIGN_DOCUMENT.docx) → [GAME_RULES](GAME_RULES.md) → các tài liệu kỹ thuật. Bảy Q và tù3 lượt cập nhật theo [DECISIONS](DECISIONS.md).
 
 ## 1. Cách đọc và fixture
 

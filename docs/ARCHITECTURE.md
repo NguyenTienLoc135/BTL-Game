@@ -6,7 +6,7 @@ Ngày cập nhật: 2026-11-14. **Luật mới và phân công A/B/C/D đã đư
 
 Đã đọc đầy đủ [AGENTS.md](../AGENTS.md), [GAME_RULES.md](GAME_RULES.md), [README.md](../README.md), các tài liệu kỹ thuật và nội dung [Word gốc](references/GAME_DESIGN_DOCUMENT.docx) gồm643 đoạn/7 bảng. Ưu tiên quyết định người dùng mới → Word cho phần không bị thay đổi → GAME_RULES → tài liệu kỹ thuật. Các ngoại lệ mới ghi trong [DECISIONS](DECISIONS.md); không sửa Word.
 
-Tên lớp/DTO và cách nối kỹ thuật liên quan A01–A06 vẫn là đề xuất. Q04=A, Q05=A, Q06=A, Q09=A, Q11=A, Q13=A, Q20=B và tù3 lượt đã APPROVED; các Q/P còn OPEN/PENDING không có mặc định ngầm. Phân công cũ A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md), không dùng bảng cũ để giao việc.
+Tên lớp/DTO và cách nối kỹ thuật liên quan A01–A06 vẫn là đề xuất. Q04=A, Q05=A, Q06=A, Q09=A, Q11=A, Q13=A, Q20=B và tù3 lượt đã APPROVED; các Q/P còn OPEN/PENDING không có mặc định ngầm. Phân công cũ A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md), không dùng bảng cũ để giao việc. Core domain của gói A hiện đã có implementation plain C#; phần tích hợp Unity/presentation vẫn chưa được xác nhận.
 
 Phạm vi: Unity 6.6 (6000.6.4f1), URP, C#, PC/Windows; tối đa 4 người cùng thiết bị hoặc AI. Không online, lưu/khôi phục trận, shop, tài khoản hoặc tính năng ngoài GAME_RULES §1. Tài liệu không tạo script, Scene, prefab hay ScriptableObject.
 

@@ -62,6 +62,21 @@ namespace BtlGame.Board
 
         public static IReadOnlyList<BoardTile> AllTiles => Tiles;
 
+        public static IReadOnlyList<int> CityTileIds
+        {
+            get
+            {
+                var ids = new List<int>();
+                foreach (BoardTile tile in Tiles)
+                {
+                    if (tile.Type == TileType.City)
+                        ids.Add(tile.Id);
+                }
+
+                return ids;
+            }
+        }
+
         public static BoardTile GetTile(int tileId)
         {
             if (tileId < 0 || tileId >= Tiles.Length)
@@ -79,6 +94,11 @@ namespace BtlGame.Board
             int destination = (startTileId + steps) % GameConstants.BoardSize;
             int passCount = (startTileId + steps) / GameConstants.BoardSize;
             return new MovementResult(startTileId, destination, steps, passCount, destination == 8);
+        }
+
+        public static bool IsValidTileId(int tileId)
+        {
+            return tileId >= 0 && tileId < Tiles.Length;
         }
     }
 }

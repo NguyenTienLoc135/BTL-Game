@@ -146,6 +146,7 @@ namespace BtlGame.Core
         public PlayerStatus Status { get; internal set; }
         public bool IsJailed { get; internal set; }
         public int JailTurnsStarted { get; internal set; }
+        public bool JailReleaseAtTurnEnd { get; internal set; }
         public int CompletedPersonalTurns { get; internal set; }
         public long OutstandingLoanAmount { get; internal set; }
         public int LoanDueAfterCompletedTurn { get; internal set; }
@@ -171,6 +172,7 @@ namespace BtlGame.Core
         public string House3ReachedOnLandingId { get; internal set; }
         public int TemporaryFestivalTurnsRemaining { get; internal set; }
         public int PowerCutTurnsRemaining { get; internal set; }
+        public string PowerCutSourcePlayerId { get; internal set; }
 
         public bool IsOwned => OwnerId != null;
     }
@@ -191,6 +193,7 @@ namespace BtlGame.Core
             MatchStatus = MatchStatus.Running;
             TurnPhase = TurnPhase.AwaitingRoll;
             CurrentPlayerIndex = 0;
+            FixedFestivalCityIds = Array.Empty<int>();
         }
 
         public IReadOnlyList<BoardTile> Board { get; }
@@ -208,6 +211,7 @@ namespace BtlGame.Core
         public string ClockPauseReason { get; internal set; }
         public bool TimeExpired { get; internal set; }
         public PendingObligation? PendingObligation { get; internal set; }
+        public TurnPhase PendingObligationReturnPhase { get; internal set; }
         public bool ObligationAdjustmentUsed { get; internal set; }
         public bool TurnBoundaryPending { get; internal set; }
         public IReadOnlyList<int> FixedFestivalCityIds { get; internal set; }
