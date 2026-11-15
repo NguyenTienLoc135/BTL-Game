@@ -90,6 +90,31 @@ namespace BtlGame.Properties
             if (cash < 0)
                 throw new ArgumentOutOfRangeException(nameof(cash));
 
+            return checked(GetTaxBase(cash, listedPropertyPrices) * 20 / 100);
+        }
+
+        public static long TaxAtAssessmentAfterLawyerCardReduction(
+            long cash,
+            IEnumerable<long> listedPropertyPrices)
+        {
+            if (cash < 0)
+                throw new ArgumentOutOfRangeException(nameof(cash));
+
+            return checked(GetTaxBase(cash, listedPropertyPrices) * 20 * 75 / 10000);
+        }
+
+        public static long ApplyLawyerCardTaxReduction(long assessedTax)
+        {
+            if (assessedTax < 0)
+                throw new ArgumentOutOfRangeException(nameof(assessedTax));
+            return assessedTax * 75 / 100;
+        }
+
+        private static long GetTaxBase(long cash, IEnumerable<long> listedPropertyPrices)
+        {
+            if (listedPropertyPrices == null)
+                throw new ArgumentNullException(nameof(listedPropertyPrices));
+
             long assetTotal = 0;
             foreach (long price in listedPropertyPrices)
             {
@@ -98,14 +123,7 @@ namespace BtlGame.Properties
                 assetTotal = checked(assetTotal + price);
             }
 
-            return checked((cash + assetTotal) * 20 / 100);
-        }
-
-        public static long ApplyLawyerCardTaxReduction(long assessedTax)
-        {
-            if (assessedTax < 0)
-                throw new ArgumentOutOfRangeException(nameof(assessedTax));
-            return assessedTax * 75 / 100;
+            return checked(cash + assetTotal);
         }
 
         public static long LiquidationValue(PropertyState property)

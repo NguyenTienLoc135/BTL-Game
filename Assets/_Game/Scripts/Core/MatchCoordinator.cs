@@ -487,9 +487,11 @@ namespace BtlGame.Core
                     listedPrices.Add(EconomyCalculator.ListedPrice(BoardCatalog.GetTile(property.TileId), property.Level));
             }
 
-            long tax = EconomyCalculator.TaxAtAssessment(State.CurrentPlayer.Cash, listedPrices);
-            if (fromCard && State.CurrentPlayer.RoleId == "Lawyer")
-                tax = EconomyCalculator.ApplyLawyerCardTaxReduction(tax);
+            long tax = fromCard && State.CurrentPlayer.RoleId == "Lawyer"
+                ? EconomyCalculator.TaxAtAssessmentAfterLawyerCardReduction(
+                    State.CurrentPlayer.Cash,
+                    listedPrices)
+                : EconomyCalculator.TaxAtAssessment(State.CurrentPlayer.Cash, listedPrices);
             SetPendingObligation(new PendingObligation(
                 State.CurrentPlayer.PlayerId, null, tax, ObligationKind.Tax));
             return tax;
@@ -545,11 +547,7 @@ namespace BtlGame.Core
                 payer.OutstandingLoanAmount = 0;
                 payer.LoanDueAfterCompletedTurn = 0;
                 State.TurnBoundaryPending = false;
-                ApplyBankerInterestIfRoundComplete();
-                SelectNextActivePlayer();
-                if (State.MatchStatus == MatchStatus.Running)
-                    State.TurnPhase = TurnPhase.AwaitingRoll;
-                CheckImmediateWin();
+                ContinueTurnBoundary();
                 return;
             }
             if (obligation.Kind == ObligationKind.JailFee)
@@ -604,10 +602,15 @@ namespace BtlGame.Core
             player.Status = PlayerStatus.Bankrupt;
             player.OutstandingLoanAmount = 0;
             player.LoanDueAfterCompletedTurn = 0;
+            bool isBankerLoan = obligation.Kind == ObligationKind.BankerLoan;
+            if (isBankerLoan)
+                State.TurnBoundaryPending = false;
             State.PendingObligation = null;
             State.ObligationAdjustmentUsed = false;
             CheckImmediateWin();
-            if (State.MatchStatus == MatchStatus.Running && player.PlayerId == State.CurrentPlayer.PlayerId)
+            if (State.MatchStatus == MatchStatus.Running && isBankerLoan)
+                ContinueTurnBoundary();
+            else if (State.MatchStatus == MatchStatus.Running && player.PlayerId == State.CurrentPlayer.PlayerId)
                 EndTurnInternal();
             else if (State.MatchStatus == MatchStatus.Running)
                 State.TurnPhase = State.PendingObligationReturnPhase;
@@ -691,6 +694,11 @@ namespace BtlGame.Core
                     player.PlayerId, null, player.OutstandingLoanAmount, ObligationKind.BankerLoan));
                 return;
             }
+            ContinueTurnBoundary();
+        }
+
+        private void ContinueTurnBoundary()
+        {
             ApplyBankerInterestIfRoundComplete();
             SelectNextActivePlayer();
             if (State.MatchStatus == MatchStatus.Running)

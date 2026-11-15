@@ -40,6 +40,16 @@ namespace BtlGame.Tests
         }
 
         [Test]
+        public void LawyerCardTaxKeepsFractionsUntilTheFinalFloor()
+        {
+            Assert.AreEqual(
+                30001,
+                EconomyCalculator.TaxAtAssessmentAfterLawyerCardReduction(
+                    100008,
+                    new[] { 100000L }));
+        }
+
+        [Test]
         public void UpgradeInvestmentIsAllocatedAcrossEveryNewTier()
         {
             PlayerState player = new PlayerState("A", 0, "A", ControllerKind.Human);
@@ -141,6 +151,112 @@ namespace BtlGame.Tests
             Assert.Throws<System.InvalidOperationException>(
                 () => coordinator.MarkCurrentPlayerBankrupt());
             Assert.AreEqual(PlayerStatus.Active, player.Status);
+        }
+
+        [Test]
+        public void BankerBankruptcyContinuesTheExistingTurnBoundaryOnce()
+        {
+            PlayerState banker = new PlayerState("A", 0, "A", ControllerKind.Human, "Banker");
+            PlayerState opponent = new PlayerState("B", 1, "B", ControllerKind.Ai);
+            PlayerState thirdPlayer = new PlayerState("C", 2, "C", ControllerKind.Ai);
+            var state = MatchCoordinator.CreateNew(
+                new List<PlayerState> { banker, opponent, thirdPlayer },
+                TimeLimit.Unlimited,
+                new[] { 1, 5, 9 });
+            var coordinator = new MatchCoordinator(
+                state,
+                new Queue<DiceRoll>(new[] { new DiceRoll(1, 2), new DiceRoll(2, 3) }).Dequeue);
+
+            coordinator.RollAndMove();
+            coordinator.Buy(3, PropertyLevel.House1);
+            coordinator.TakeBankerLoan();
+            coordinator.EndTurn();
+
+            coordinator.RollAndMove();
+            coordinator.Buy(5, PropertyLevel.House1);
+            coordinator.EndTurn();
+            coordinator.EndTurn();
+
+            for (int completedTurn = 2; completedTurn <= 5; completedTurn++)
+            {
+                if (completedTurn == 4)
+                    coordinator.ApplyPowerCut(5);
+
+                coordinator.AssessTax(false);
+                coordinator.ResolvePendingObligation();
+                coordinator.EndTurn();
+                if (completedTurn < 5)
+                {
+                    coordinator.EndTurn();
+                    coordinator.EndTurn();
+                }
+            }
+
+            Assert.IsTrue(state.TurnBoundaryPending);
+            Assert.AreEqual(5, banker.CompletedPersonalTurns);
+            Assert.AreEqual(7, state.PersonalTurnOrdinal);
+            Assert.AreEqual(1, state.CompletedPlayersThisRound);
+            Assert.AreEqual(110000, state.PendingObligation.Value.Amount);
+            Assert.AreEqual(2, state.PropertiesByTileId[5].PowerCutTurnsRemaining);
+
+            coordinator.SellToBank(3);
+            coordinator.MarkCurrentPlayerBankrupt();
+
+            Assert.AreEqual(PlayerStatus.Bankrupt, banker.Status);
+            Assert.AreEqual(5, banker.CompletedPersonalTurns);
+            Assert.AreEqual(7, state.PersonalTurnOrdinal);
+            Assert.AreEqual(1, state.CompletedPlayersThisRound);
+            Assert.AreEqual(2, state.PropertiesByTileId[5].PowerCutTurnsRemaining);
+            Assert.IsFalse(state.TurnBoundaryPending);
+            Assert.IsFalse(state.PendingObligation.HasValue);
+            Assert.AreSame(opponent, state.CurrentPlayer);
+            Assert.AreEqual(TurnPhase.AwaitingRoll, state.TurnPhase);
+            Assert.AreEqual(PlayerStatus.Active, thirdPlayer.Status);
+        }
+
+        [Test]
+        public void BankerLoanSettlementAtTimeLimitRanksTheMatchImmediately()
+        {
+            PlayerState firstPlayer = new PlayerState("A", 0, "A", ControllerKind.Human);
+            PlayerState secondPlayer = new PlayerState("C", 1, "C", ControllerKind.Ai);
+            PlayerState banker = new PlayerState("B", 2, "B", ControllerKind.Ai, "Banker");
+            var state = MatchCoordinator.CreateNew(
+                new List<PlayerState> { firstPlayer, secondPlayer, banker },
+                TimeLimit.Minutes30,
+                new[] { 1, 5, 9 });
+            var coordinator = new MatchCoordinator(state, () => new DiceRoll(1, 1));
+
+            coordinator.AssessTax(false);
+            coordinator.ResolvePendingObligation();
+            coordinator.EndTurn();
+            coordinator.AssessTax(false);
+            coordinator.ResolvePendingObligation();
+            coordinator.EndTurn();
+
+            coordinator.TakeBankerLoan();
+            coordinator.EndTurn();
+            for (int bankerTurn = 2; bankerTurn <= 5; bankerTurn++)
+            {
+                coordinator.EndTurn();
+                coordinator.EndTurn();
+                if (bankerTurn == 5)
+                    coordinator.AdvanceClock(30 * 60);
+                coordinator.EndTurn();
+            }
+
+            Assert.IsTrue(state.TimeExpired);
+            Assert.AreEqual(TurnPhase.AwaitingObligation, state.TurnPhase);
+            Assert.AreEqual(110000, state.PendingObligation.Value.Amount);
+
+            coordinator.ResolvePendingObligation();
+
+            Assert.AreEqual(MatchStatus.Finished, state.MatchStatus);
+            Assert.AreEqual(TurnPhase.Finished, state.TurnPhase);
+            Assert.AreEqual(WinReason.TimeLimit, state.WinReason);
+            CollectionAssert.AreEqual(new[] { "B" }, state.Winners);
+            Assert.AreEqual(292000, banker.Cash);
+            Assert.AreEqual(240000, firstPlayer.Cash);
+            Assert.AreEqual(240000, secondPlayer.Cash);
         }
 
         private static int CountTiles(TileType type)
