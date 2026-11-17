@@ -21,7 +21,7 @@
 - Sử dụng **hai xúc xắc 6 mặt**. Tổng điểm di chuyển về phía tăng chỉ số ô, quấn vòng ở 31 → 0.
 - **Tung đôi:** được tung tiếp **không giới hạn** sau khi giải quyết xong ô đến. Tất cả lần tung thêm nằm trong **cùng lượt riêng**, không làm chạy cooldown, đếm lại thời hạn hiệu ứng hay sinh vòng chung mới.
 - **Q11 đã duyệt:** nếu tung đôi rồi dừng ô8 hoặc rút Vào tù thì vào trạng thái giam, **hủy quyền gieo thêm và kết thúc lượt ngay**; vẫn phải xử lý các mốc cuối lượt cần thiết. Không đổi luật tung đôi để ra tù ở §7.2.
-- Đi ngang hoặc dừng đúng ô xuất phát theo đường di chuyển hợp lệ nhận **100.000 mỗi lần qua ô 0**; không nhận hai lần cho cùng một lần vượt mốc.
+- Đi qua hoặc dừng đúng ô Xuất phát trong hành trình hợp lệ nhận **200.000 mỗi lần**, kể cả khi dịch chuyển. Một lần đến ô 0 chỉ được tính một lần thưởng, kể cả khi ô 0 là điểm dừng.
 - **Q20 đã duyệt:** đồng hồ hữu hạn tạm dừng khi chờ quyết định trong popup cho cả **Human và AI**. Hết giờ ghi nhận yêu cầu kết thúc; hoàn tất **toàn bộ lần dừng đang xử lý và hiệu ứng/giao dịch phát sinh trực tiếp**, gồm lựa chọn mua/bỏ qua, cưỡng chế, dịch chuyển, lễ hội và chuỗi liên quan. Không mở lần gieo mới, kể cả đôi; không bắt đầu kỹ năng chủ động mới không liên quan đến chuỗi đang xử lý. Không cắt bỏ phản ứng hợp lệ trực tiếp thuộc nghĩa vụ đang giải quyết.
 - Sau khi hoàn tất chuỗi, xử lý mốc cuối lượt theo thứ tự dưới đây rồi mới xác định kết quả hết giờ; thắng tức thời trong chuỗi kết thúc trận ngay.
 - Cuối thời gian nếu chưa có thắng tức thời: so **tiền mặt** của người còn chơi → hòa thì so **tổng giá niêm yết hiện tại của bất động sản** → vẫn hòa thì **đồng thắng**.
@@ -43,7 +43,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 
 | Ô | Loại | Tên / quốc gia / mã hoặc chức năng | Giá Nhà 3 tham chiếu (đ) |
 |---:|---|---|---:|
-| 0 | Xuất phát | Qua/dừng ô 0: +100.000 theo luật | — |
+| 0 | Xuất phát | Qua/dừng ô 0: +200.000 theo luật | — |
 | 1 | Thành phố | Hà Nội — Việt Nam — TP1 | 100.000 |
 | 2 | Thành phố | Đà Nẵng — Việt Nam — TP2 | 120.000 |
 | 3 | Thành phố | TP. Hồ Chí Minh — Việt Nam — TP3 | 140.000 |
@@ -191,7 +191,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 
 ### 7.3. Dịch chuyển (ô 24)
 
-- Tại ô 24 có thể **trả 100.000** để chọn ô đích; ô đích vẫn **kích hoạt đầy đủ hiệu ứng**. Nếu hành trình chọn **vượt qua ô xuất phát** thì nhận **100.000** đúng luật.
+- Tại ô 24 có thể **trả 100.000** để chọn ô đích; ô đích vẫn **kích hoạt đầy đủ hiệu ứng**. Hành trình hợp lệ đi qua hoặc dừng đúng ô Xuất phát nhận **200.000** theo luật §2.
 - Không cho một thao tác dịch chuyển kích hoạt lại **chính ô 24** tạo vòng vô hạn.
 - Thẻ **Đến ô dịch chuyển** đưa nhân vật đến ô 24; việc sử dụng chức năng dịch chuyển **vẫn phải trả phí 100.000**.
 

@@ -88,7 +88,7 @@ ID hành động và revision chỉ phục vụ chống callback/click lặp tro
 
 Nhận MatchSetup → kiểm tra catalog và các lựa chọn đã có quyết định → tạo GameState với tiền 300.000/người, ô 0 → chọn đúng 3 TP lễ hội cố định khác nhau → chọn người bắt đầu theo quyết định Q03 → bắt đầu lượt riêng.
 
-Không cấp 100.000 chỉ vì khởi tạo vị trí ô 0; tiền thưởng gắn với một lần di chuyển hợp lệ qua/dừng ô xuất phát (GAME_RULES §1–2).
+Chỉ cấp thưởng Xuất phát 200.000 khi hành trình hợp lệ đi qua hoặc dừng đúng ô 0. Khởi tạo tại ô 0 chỉ cấp tiền mặt ban đầu theo GAME_RULES §1–2.
 
 ### 6.2. Chu trình
 
@@ -158,7 +158,7 @@ Domain xử lý tuần tự trên luồng điều phối chính; không cần nh
 Đề xuất mỗi hành động có một ActionContext đang chờ:
 
 1. Board tính đường đi, số lần qua ô 0 và vị trí cuối.
-2. Coordinator commit vị trí logic và tiền qua ô 0 một lần, phát MovementPresentation kèm actionId.
+2. Coordinator commit vị trí logic và thưởng 200.000 một lần cho mỗi lần vượt mốc ô 0, kể cả dừng đúng ô này, rồi phát MovementPresentation kèm actionId.
 3. Khóa input hành động khác; view chạy đường đi đã chốt.
 4. Callback đúng actionId chỉ mở bước xử lý ô đến, không cộng tiền hay di chuyển lần nữa. Callback cũ/lặp bị bỏ qua.
 

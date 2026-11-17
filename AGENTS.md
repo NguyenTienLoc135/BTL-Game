@@ -23,7 +23,7 @@
 
 ## 2. LUẬT BẤT BIẾN — KIỂM TRA TRƯỚC KHI LẬP TRÌNH
 
-- Người chơi bắt đầu **300.000**; qua/dừng ô xuất phát đúng luật nhận **100.000**; hai xúc xắc 6 mặt; **đôi được tung tiếp không giới hạn trong CÙNG lượt riêng**, KHÔNG tính lượt riêng mới cho cooldown, duration hoặc vòng chung. Ngoại lệ đã duyệt: vào tù hủy quyền gieo thêm và kết thúc lượt; hết giờ không mở lần gieo mới.
+- Người chơi bắt đầu **300.000**; đi qua hoặc dừng đúng ô Xuất phát trong hành trình hợp lệ nhận **200.000 mỗi lần**, kể cả khi dịch chuyển. Mỗi lần vượt mốc ô 0 chỉ thưởng một lần. Dùng hai xúc xắc 6 mặt; **đôi được tung tiếp không giới hạn trong CÙNG lượt riêng**, KHÔNG tính lượt riêng mới cho cooldown, duration hoặc vòng chung. Ngoại lệ đã duyệt: vào tù hủy quyền gieo thêm và kết thúc lượt; hết giờ không mở lần gieo mới.
 - 20 TP dùng giá **Nhà 3 tham chiếu 100.000–800.000** theo từng TP; cấp **Chưa sở hữu (riêng) → Cọc (40%) → Nhà 1 (60%) → Nhà 2 (80%) → Nhà 3 (100%) → Khách sạn (120%)**. Mua lần đầu tối đa Nhà 3; muốn lên Khách sạn theo luật quay lại ô (trừ kỹ năng Kỹ Sư).
 - Thuê gốc TP = `5% × Giá Nhà 3 × hệ số theo cấp [1.5, 2.5, 4, 6, 8]`. Tiền thuê cộng các % tăng/giảm **đại số trên thuê gốc**, sau đó mới áp dụng nhân đôi, cuối cùng làm tròn xuống.
 - Độc quyền trọn một nước: +20% thuê TP của nước; **độc quyền trọn 3 nước bất kỳ thắng ngay**. Chọn ngẫu nhiên **3 thành phố lễ hội cố định +50% thuê** đầu trận. Lễ hội tạm phí 200.000: +50% thuê **một TP của mình trong 2 lượt riêng** (không phải biển; không chồng nhiều lễ hội tạm trên cùng TP).
