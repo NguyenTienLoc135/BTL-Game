@@ -22,8 +22,8 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | L03 / §2 | A ô 1; tiền không đổi do các ô đi đến đều bỏ mua; đang lượt riêng k | Tung (1,1)→ô3, (2,2)→ô7, (3,3)→ô13; xử lý từng ô | Cả ba lần đều cho tung tiếp; vẫn lượt k; đi ngang ô8 không bị giam; không áp “ba đôi vào tù” |
 | L04 / §2 | Tiếp fixture riêng tương đương A ô13 trong lượt k sau nhiều đôi | Tung (1,2)→ô16, bỏ tổ chức lễ hội | Không có quyền tung thêm từ kết quả này; hoàn tất đúng một lượt riêng, không phải bốn |
 | L05 / §2,9 | A đã hoàn tất4 lượt, đang lượt5; Cúp điện do A tạo còn2 lượt tiếp theo, Active còn khóa3 lượt | Giải quyết hai lần đôi và animation, chưa kết thúc lượt5 | completedPersonalTurnCount vẫn4; cooldown vẫn khóa3 lượt, effect còn2; không rút ngắn vì tung thêm |
-| L06 / §2 | A ô30, cash 300.000 | Di chuyển (1,1), dừng đúng ô0 | Cash 400.000; thưởng một lần 100.000, không cộng lần thứ hai vì “dừng ô0” |
-| L07 / §2 | A ô31, cash 300.000; ô2 chưa chủ | Tung (1,2), đến ô2, bỏ mua | Cash 400.000; vị trí2; chỉ một lần qua0 |
+| L06 / §2 | A ô30, cash 300.000 | Di chuyển (1,1), dừng đúng ô0 | Cash 500.000. Thưởng đúng một lần 200.000 cho lần dừng ô0 |
+| L07 / §2 | A ô31, cash 300.000; ô2 chưa chủ | Tung (1,2), đến ô2, bỏ mua | Đi qua ô0 một lần, nhận 200.000. Cash 500.000, vị trí2 |
 | L08 / §1–2 | A vừa khởi tạo ô0, cash300.000 | Chỉ hiển thị bàn cờ, chưa di chuyển | Cash vẫn300.000; không phát thưởng từ sự kiện view/khởi tạo |
 | L09 / §2 | A ô1, cash300.000; ô3 chưa chủ | Di chuyển2, bỏ mua | Vị trí3; cash300.000; không có thưởng xuất phát |
 
@@ -89,8 +89,8 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | L50 / §7.2 | A bị giam, cash300.000 | Trả200.000 rồi tung (1,2) | Cash100.000; ra tù, đếnô11; xử lýô11 bình thường |
 | L51 / §7.2,8 | A bị giam, có thẻ Ra tù, cash0 | Dùng thẻ rồi tung (1,2) | Bỏ đúng thẻ Ra tù, không trừ tiền; ra tù, đếnô11 |
 | L52 / §7.2 | B bị giam, sở hữu Hà Nội Nhà3; A cash100.000, Bcash0 | A trả thuê khi dừng Hà Nội | A70.000, B30.000; bị giam không làm mất quyền thu thuê |
-| L53 / §7.3 | A ô24, cash200.000; chọn đường đi hợp lệ qua25…31→0→1; Hà Nội chưa chủ | Trả100.000 dịch chuyển đếnô1, bỏ mua | Trừ100.000 rồi thưởng100.000 qua0, cash200.000; vị trí1 và kích hoạt lựa chọn mua |
-| L54 / §7.3 | A ô24, cash200.000; biển25 chưa chủ | Trả100.000 dịch chuyển đếnô25, bỏ mua | Cash100.000; không qua0; xử lý ô biển25 |
+| L53 / §7.3 | A ô24, cash200.000; chọn đường đi hợp lệ qua25…31→0→1; Hà Nội chưa chủ | Trả100.000 dịch chuyển đếnô1, bỏ mua | Trừ 100.000 phí dịch chuyển, thưởng 200.000 đúng một lần qua ô0. Cash 300.000, vị trí1 và kích hoạt lựa chọn mua |
+| L54 / §7.3 | A ô24, cash200.000; biển25 chưa chủ | Trả100.000 dịch chuyển đếnô25, bỏ mua | Cash 100.000 sau khi trả phí. Hành trình không qua ô0 nên thưởng bằng 0. Xử lý ô biển25 |
 | L55 / §7.3,8 | A đã đếnô24 từ thẻ; cash200.000 | Chọn dùng chức năng dịch chuyển đếnô25, bỏ mua | Dịch vụ vẫn thu100.000; không miễn phí vì đến từ thẻ |
 | L56 / §7.4 | A cash300.000 tạiô16, sở hữu Hà Nội; chưa có festival tạm | Chọn Hà Nội và xác nhận lễ hội | Cash100.000; Hà Nội có +50% trong2 lượt riêng tiếp theo của A; không áp biển |
 | L57 / §4.2,9 | A tạo festival tạm ở lượt k; đang ở phần cuối lượt k, sau đó có nhiều lần đôi; tiếp tục tới cuối k+1 và k+2 | Theo dõi mốc hoàn tất lượt | Cuối k không tính một lượt tiếp theo; đôi không rút thời hạn; hiệu lực còn qua khoảng đối thủ xen giữa và hết sau khi hoàn tất k+2 |
@@ -148,7 +148,7 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | S21 / §9 Banker | B Banker100.000, Ultimate chưa dùng | Dùng Ultimate thành công | Cash300.000, Ultimate đã dùng; lần dùng thứ hai bị từ chối |
 | S22 / §9 Strategist | Chính sách rút fixture cấp thứ tự [Tiền thưởng, Động đất,…]; A Strategist | Preview nhiều lần rồi rút | Preview luôn Tiền thưởng; không tiến cursor; lần rút thật đúng Tiền thưởng; không suy ra thuật toán deck sản phẩm |
 | S23 / §9 Strategist | A Strategist ô1; đã gieo(3,3), chưa di chuyển; Active sẵn sàng; kết quả gieo lại(1,4) | Dùng Active gieo lại | Dùng tổng5 đếnô6, không tổng6 cũ; phải chấp nhận kết quả mới, không chọn lại kết quả cũ |
-| S24 / §9, Q04 | A Strategist ô31, có quyền gieo tiếp theo, Ultimate sẵn sàng, cash100.000; ô2 chưa chủ | Ultimate chọnô2 phía trước3 bước, bỏ mua | Đếnô2, nhận100.000 qua0; Ultimate đã dùng, quyền gieo bị thay đã tiêu; không tự có gieo thêm vì Ultimate |
+| S24 / §9, Q04 | A Strategist ô31, có quyền gieo tiếp theo, Ultimate sẵn sàng, cash100.000; ô2 chưa chủ | Ultimate chọnô2 phía trước3 bước, bỏ mua | Đếnô2, nhận 200.000 qua ô0, cash 300.000. Ultimate đã dùng, quyền gieo bị thay đã tiêu, không tự có gieo thêm vì Ultimate |
 | S25 / §9 Strategist | A Strategist ô1, Ultimate sẵn sàng | Chọn ô8 cách7 bước | Từ chối; Ultimate chưa tiêu hao |
 | S26 / §9 chung | Mỗi role ở fixture riêng dùng Active thành công tại lượt1, N=5/6/7/6/7/5 | Hoàn tất lượt1 và N−1 lượt tiếp theo, rồi lượt thứ N tiếp theo | Cuối lượt1 không tính; trước hoàn tất lượt1+N vẫn khóa thời gian; sau đó hết khóa thời gian, cửa sổ dùng theo Q04 |
 | S27 / §9 chung | Engineer không có TP hợp lệ; Active sẵn sàng | Thử nâng miễn phí | Từ chối; cooldown không khởi động; tiền/cấp không đổi |
@@ -165,11 +165,11 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | L62 / §2,10 | Hết giờ; mọi hành động đang dở đã hoàn tất; A cash200.000/B100.000; không ai đạt thắng tức thời | Xếp hạng | A thắng dù B có giá niêm yết BĐS cao hơn |
 | L63 / §2,10 | Hết giờ an toàn; A/B cash200.000; A có Hà Nội Nhà3 giá100.000, B có Sydney Cọc giá320.000; không thắng tức thời | Xếp hạng | B thắng bằng giá niêm yết, không so vốn thực hoặc tổng tiền+đất ở bước đầu |
 | L64 / §2,10 | Hết giờ an toàn; A/B cash200.000, cùng tổng giá niêm yết100.000; không thắng tức thời | Xếp hạng | A và B đồng thắng |
-| L65 / §2,10 | Clock còn1 giây, A cash0 ô30 đã chốt(1,1), animation chưa xong; Bcash200.000; ô0 không nghĩa vụ | Clock hết rồi hoàn tất hành động | A đến0 và nhận100.000; không bắt đầu tung thêm dù ra đôi; sau xử lý an toàn B thắng |
+| L65 / §2,10 | Clock còn1 giây, A cash0 ô30 đã chốt(1,1), animation chưa xong; Bcash300.000; ô0 không nghĩa vụ | Clock hết rồi hoàn tất hành động | A đến ô0 và nhận 200.000 một lần. Không bắt đầu tung thêm dù ra đôi. Sau xử lý an toàn B thắng |
 | L66 / §2, Q20 | Hai fixture Human/AI riêng, clock60 giây, popup chờ quyết định đang mở | Chờ10 giây rồi đóng popup, đo thêm5 giây không popup | Cả hai: lúc chờ vẫn60; sau5 giây tiếp tục còn55 |
 | L67 / §10 | Chế độ vô hạn, chưa có3 nước/4 biển/chỉ còn1 người | Thời gian thực trôi qua60 phút | Không kết thúc vì hết giờ |
 | L68 / §6,10 | A mua tài sản cuối để đủ3 nước, hành động commit xong; chưa kết thúc lượt | Kiểm tra kết quả sau giao dịch | Kết thúc ngay, không đợi người chơi bấm kết thúc lượt |
-| L69 / AGENTS §4, đề xuất A03/A06 | Một movementId đã cấp100.000 qua0, view còn animation | Callback hoàn tất đến hai lần | Yêu cầu kỹ thuật đề xuất: chỉ tiếp tục xử lý ô một lần, không cộng thêm100.000 hoặc sinh lượt mới |
+| L69 / AGENTS §4, đề xuất A03/A06 | Một movementId đã cấp 200.000 khi qua ô0, view còn animation | Callback hoàn tất đến hai lần | Chỉ tiếp tục xử lý ô một lần. Tổng thưởng cho movementId này vẫn là 200.000, không sinh lượt mới |
 | L70 / AGENTS §4, đề xuất A03 | Popup mua giá40.000 tại revision r; trước submit trạng thái đổi và revision r+1 | Submit quyết định cũ | Yêu cầu kỹ thuật đề xuất: từ chối/làm mới quyết định; không trừ tiền theo snapshot cũ |
 | L71 / §11 | Người thật và AI có cùng trạng thái/role/tiền/pha | Gửi cùng yêu cầu cưỡng chế Hotel | Cả hai bị từ chối giống nhau; AI không bypass validator |
 
@@ -244,7 +244,7 @@ Các mục dưới chưa có phê duyệt bổ sung hoặc chi tiết hợp đ�
 |---|---|---|---|
 | D02 / Q02 | Trình tự thẻ đã hết, một số loại đang được giữ | Rút tiếp và xem trước thẻ | Cách tái tạo deck, xác suất, vị trí lá bỏ; chưa có oracle |
 | D03 / Q03 | Setup1 người hoặc hai người chọn cùng nghề | Xác nhận tạo trận | Số tối thiểu, trùng nghề, người đầu tiên; không mặc định cho phép/từ chối |
-| D10 / Q10 | A ô28, cash100.000 | Rút Vào tù hoặc Đến dịch chuyển | Chặng thẻ có qua0/nhận100.000 không; chưa gán oracle cho cash |
+| D10 / Q10 | A ô28, cash100.000 | Rút Vào tù hoặc Đến dịch chuyển | Việc chặng thẻ có đi qua ô0 hay không vẫn chờ Q10. Nếu hành trình hợp lệ qua ô0 thì thưởng 200.000 theo START-200K |
 | D12 / Q12 | A Engineer vừa mua Hà Nội Nhà3 ở cùng lần đến | Dùng Active nâng Hotel | Ngoại lệ “khi hợp lệ” có vượt điều kiện lần dừng sau hay không |
 | D14 / Q14 | Hà Nội đã có festival tạm còn1 lượt, A đủ200.000 | Mua festival tiếp trên cùng TP | Từ chối hay gia hạn/thay thế; tuyệt đối không tự cho hai effect chồng |
 | D15 / Q15 | Hà Nội có festival tạm do A tạo; B cưỡng chế thành công | Tiếp tục thời hạn/thuê | Festival tạm còn hay mất, nguồn đếm lượt theo ai |

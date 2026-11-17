@@ -1,10 +1,10 @@
 # Quyết định và câu hỏi chưa xác nhận
 
-Cập nhật: 2026-11-14. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Không có implementation hoặc test thực thi được xác nhận bởi tài liệu này.
+Cập nhật: 2026-11-17. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Không có implementation hoặc test thực thi được xác nhận bởi tài liệu này.
 
 ## 1. Nguồn thực tế và thứ tự ưu tiên
 
-1. Quyết định mới được người dùng phê duyệt rõ ràng: gameplay ngày2026-11-06 và cập nhật người phụ trách A/B ngày2026-11-14 (F02).
+1. Quyết định mới được người dùng phê duyệt rõ ràng: gameplay ngày2026-11-06, cập nhật người phụ trách A/B ngày2026-11-14 (F02) và mức thưởng Xuất phát ngày 17/11/2026 (START-200K).
 2. [Word gốc](references/GAME_DESIGN_DOCUMENT.docx) đối với luật không bị quyết định mới thay đổi.
 3. [GAME_RULES](GAME_RULES.md).
 4. [ARCHITECTURE](ARCHITECTURE.md), [DATA_MODEL](DATA_MODEL.md), [TEST_CASES](TEST_CASES.md) và tài liệu kỹ thuật khác.
@@ -31,6 +31,7 @@ Người phê duyệt: **người dùng giao việc trong chat dự án**; luậ
 | JAIL-03 | APPROVED — THAY WORD | Tối đa3 lượt riêng ở tù; lượt bị bắt không tính. Lượt3 thử không đôi bắt buộc200.000, được thanh lý, thiếu tiếp phá sản. Trả thành công thả cuối lượt, không đi thêm; lượt sau mới đi. Thoát sớm/đôi giữ luật thường; vẫn thu thuê. |
 | F01 | SUPERSEDED — PHÂN CÔNG 2026-11-06 | Phân công cũ: Hồ Đức Mạnh—A Core Gameplay & Economy; Nguyễn Xuân Hoàng Lộc—B Board3D & Visual; Đinh Phương Ly—C UI/UX & Event Cards; Nguyễn Tiến Lộc—D Characters, Skills & AI. Người phụ trách A/B đã được thay bằng F02; không dùng dòng này để giao việc hiện tại. |
 | F02 | APPROVED — PHÂN CÔNG 2026-11-14 | Nguyễn Xuân Hoàng Lộc—A Core Gameplay & Economy; Hồ Đức Mạnh—B Board 3D & Visual; Đinh Phương Ly—C UI/UX & Event Cards; Nguyễn Tiến Lộc—D Characters, Skills & AI. Chỉ đổi người nhận A/B; giữ nguyên nhiệm vụ, hợp đồng và ranh giới module. Core duy nhất ghi state; Gameplay do B (Mạnh), MainMenu do C (Ly). |
+| START-200K | APPROVED — 17/11/2026 | Mỗi lần đi qua hoặc dừng đúng ô Xuất phát trong hành trình hợp lệ thưởng 200.000đ, kể cả khi dịch chuyển. Chỉ thưởng một lần cho mỗi lần vượt mốc ô 0. Phí dịch chuyển ô 24 vẫn là 100.000đ. Các khoản tiền khác giữ nguyên. |
 
 Nguồn F02: yêu cầu của người dùng ngày2026-11-14: “nhiệm vụ A là của hoàng lộc và nhiệm vụ B là của mạnh”. F02 thay phần người phụ trách A/B của F01, không phê duyệt thêm kiến trúc hoặc thay luật gameplay.
 
@@ -42,6 +43,7 @@ Nguồn F02: yêu cầu của người dùng ngày2026-11-14: “nhiệm vụ A 
 | §3.2a cho đôi tung thêm, chưa ghi ngoại lệ mới vào tù | Q11 hủy quyền thêm khi vừa bị giam | Không dùng câu “đôi luôn tung tiếp” để cho gieo trong cùng lượt vừa bị bắt. |
 | §4.3b “1 lượt riêng hiệu lực”, chưa chỉ mốc Ultimate Doanh Nhân | Q05=A hết trước lượt riêng kế tiếp | Không dùng phương án B tới hết lượt kế tiếp dù agent từng đề xuất B. |
 | Các cửa sổ skill, tổ hợp miễn/giảm, thứ tự cuối lượt, tiền lẻ và ranh giới hết giờ chưa đủ chi tiết | Q04/Q06/Q09/Q13/Q20 bổ sung | Không phải sửa số giá/công thức Word; bổ sung hành vi có nguồn duyệt mới. |
+| Word còn ghi mức thưởng Xuất phát trước khi có quyết định START-200K | Áp dụng thưởng 200.000đ từ quyết định ngày 17/11/2026 | Cần đồng bộ báo cáo Word ở lần cập nhật tài liệu Word. Phí dịch chuyển vẫn là 100.000đ. |
 
 Các giá,32 ô,20 TP/8 nước,4 biển,14 thẻ,6 nghề/cooldown và phạm vi sản phẩm không bị sửa. Không ghi đè Word bằng bản mới hoặc sửa Word để che khác biệt.
 
@@ -51,7 +53,7 @@ Các giá,32 ô,20 TP/8 nước,4 biển,14 thẻ,6 nghề/cooldown và phạm v
 |---|---|---|
 | R01 | 32 ô, 20 TP/8 nước, 4 biển, 8 chức năng; ID 0–31; TP17 không có; hai TP cuối thuộc Úc | §1, §3 |
 | R02 | Tối đa 4 người cùng máy/AI, 300.000/người, ô 0, ba TP lễ hội cố định, thời gian 30/45/60/vô hạn | §1–2 |
-| R03 | Hai xúc xắc, đôi thêm không giới hạn trong cùng lượt riêng; qua ô 0 nhận 100.000 đúng một lần/mốc | §2 |
+| R03 | Hai xúc xắc, đôi thêm không giới hạn trong cùng lượt riêng; qua hoặc dừng đúng ô 0 trong hành trình hợp lệ nhận 200.000 đúng một lần/mốc | §2, START-200K |
 | R04 | Cấp, giá, công thức thuê; cộng phần trăm trên thuê gốc rồi nhân đôi, floor cuối; Hotel có miễn nhiễm | §4 |
 | R05 | Giá/thuê biển; 4 biển thắng ngay; không nâng/cưỡng chế/phá biển | §5 |
 | R06 | Cưỡng chế thường 200% sau trả thuê; Investor Ultimate 150% từ xa không thuê; vốn thực theo bậc | §6 |
