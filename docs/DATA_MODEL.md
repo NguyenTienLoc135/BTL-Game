@@ -35,7 +35,7 @@ Bảng dưới sao từ GAME_RULES §3; ID ô bất biến. Dấu — nghĩa là
 
 | TileId | TileType đề xuất | Tên | CountryId / mã hiển thị | Giá Nhà3 hoặc giá mua biển |
 |---:|---|---|---|---:|
-| 0 | Start | Xuất phát | — | — |
+| 0 | Start | Xuất phát | Thưởng 200.000 khi đi qua hoặc dừng đúng ô trong hành trình hợp lệ | — |
 | 1 | City | Hà Nội | Vietnam / TP1 | 100.000 |
 | 2 | City | Đà Nẵng | Vietnam / TP2 | 120.000 |
 | 3 | City | TP. Hồ Chí Minh | Vietnam / TP3 | 140.000 |
@@ -225,6 +225,8 @@ PendingDecision đề xuất: decisionId, actorId, actionId, rootLandingId, expe
 PendingAction đề xuất có actionId, rootLandingId, sourceKind, continuationKind, currentStep, remainingParticipants, settledParticipantIds, relatedDecisionIds, allowedContinuationKinds. Phân biệt một giao dịch với toàn bộ chuỗi lần dừng; Q20 giữ chuỗi đang dở sau hết giờ nhưng từ chối lệnh chủ động mới không liên quan. Thứ tự các người trả còn Q19 PENDING; việc lưu ai đã trả không cần chờ quyết định thứ tự.
 
 MovementContext đề xuất: movementId, landingId, rootLandingId, sourceKind, fromTileId, destinationTileId, đường đi, số lần qua0, diceResult tùy chọn, consumedRollEntitlementId tùy chọn, teleportOperationId tùy chọn, presentationPending. Strategist Ultimate không ghi kết quả đôi. Vào tù hủy quyền gieo thêm theo Q11; nhánh buộc thả cuối lượt3 không tạo MovementContext. Đường đi đặc biệt chưa rõ vẫn chờ Q10.
+
+Số lần qua ô 0 tính cả khi ô 0 là điểm dừng của hành trình hợp lệ. Core cộng 200.000 cho mỗi lần được tính. Phí dịch chuyển 100.000 là khoản riêng.
 
 EndTurnContext đề xuất lưu closingPersonalTurnOrdinal, pendingDueObligationIds, deadlineSettlementCompleted, countersUpdated, roundInterestApplied để Q09 chỉ chạy mỗi bước một lần sau popup/callback. Khi đã có thắng tức thời thì không chạy các bước không cần thiết. Mốc BeforeNextSourceTurn của RentDouble được kiểm tra ngay trước bắt đầu lượt chủ, độc lập các effect hết cuối lượt.
 
