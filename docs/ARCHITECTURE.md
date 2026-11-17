@@ -1,14 +1,14 @@
 # Kiến trúc đề xuất — Cờ Tỷ Phú RPG
 
-Ngày cập nhật: 2026-11-14. **Luật mới và phân công A/B/C/D đã được người dùng phê duyệt; tên lớp/API và phương án kiến trúc cụ thể vẫn là ĐỀ XUẤT**. F02 đổi người phụ trách A sang Nguyễn Xuân Hoàng Lộc, B sang Hồ Đức Mạnh; phạm vi từng gói không đổi. Chưa có implementation.
+Ngày cập nhật: **2026-11-17**. **Luật và phân công A/B/C/D đã được người dùng phê duyệt; A01–A06 và hợp đồng tích hợp cụ thể vẫn cần nhóm rà soát**. F02 đổi A sang Nguyễn Xuân Hoàng Lộc, B sang Hồ Đức Mạnh. Code A/D đã có phần triển khai; tình trạng/API và mốc test xem README, không coi tài liệu kiến trúc là bằng chứng game đã hoàn tất.
 
 ## 1. Nguồn và phạm vi
 
-Đã đọc đầy đủ [AGENTS.md](../AGENTS.md), [GAME_RULES.md](GAME_RULES.md), [README.md](../README.md), các tài liệu kỹ thuật và nội dung [Word gốc](references/GAME_DESIGN_DOCUMENT.docx) gồm643 đoạn/7 bảng. Ưu tiên quyết định người dùng mới → Word cho phần không bị thay đổi → GAME_RULES → tài liệu kỹ thuật. Các ngoại lệ mới ghi trong [DECISIONS](DECISIONS.md); không sửa Word.
+Đã đối chiếu [AGENTS.md](../AGENTS.md), [GAME_RULES.md](GAME_RULES.md), [README.md](../README.md), các tài liệu kỹ thuật và nội dung trích xuất thực tế từ [Word gốc](references/GAME_DESIGN_DOCUMENT.docx). Ưu tiên quyết định người dùng mới → Word cho phần không bị thay đổi → GAME_RULES → tài liệu kỹ thuật. Word hiện đã ghi tù tối đa3 lượt; các bổ sung khác theo [DECISIONS](DECISIONS.md). Không sửa Word trong nhiệm vụ này.
 
-Tên lớp/DTO và cách nối kỹ thuật liên quan A01–A06 vẫn là đề xuất. Q04=A, Q05=A, Q06=A, Q09=A, Q11=A, Q13=A, Q20=B và tù3 lượt đã APPROVED; các Q/P còn OPEN/PENDING không có mặc định ngầm. Phân công cũ A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md), không dùng bảng cũ để giao việc.
+Tên lớp/DTO và cách nối A01–A06 vẫn cần nhóm thống nhất. Q04/05/06/09/11/13/20, tù3 lượt và bổ sung Q03/10/12/14/15/16/17/19, P01/P02 ngày2026-11-17 đã có quyết định; Q02 deck còn PENDING, không có mặc định ngầm. A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md).
 
-Phạm vi: Unity 6.6 (6000.6.4f1), URP, C#, PC/Windows; tối đa 4 người cùng thiết bị hoặc AI. Không online, lưu/khôi phục trận, shop, tài khoản hoặc tính năng ngoài GAME_RULES §1. Tài liệu không tạo script, Scene, prefab hay ScriptableObject.
+Phạm vi: Unity6.6 (6000.6.4f1), URP, C#, PC/Windows;2–4 người cùng máy/AI, được trùng nghề. Không online, lưu/khôi phục trận, shop, tài khoản hoặc tính năng ngoài GAME_RULES §1.
 
 ## 2. Tổng thể: một bộ luật, một trạng thái
 
@@ -86,9 +86,9 @@ ID hành động và revision chỉ phục vụ chống callback/click lặp tro
 
 ### 6.1. Khởi tạo
 
-Nhận MatchSetup → kiểm tra catalog và các lựa chọn đã có quyết định → tạo GameState với tiền 300.000/người, ô 0 → chọn đúng 3 TP lễ hội cố định khác nhau → chọn người bắt đầu theo quyết định Q03 → bắt đầu lượt riêng.
+Nhận MatchSetup → kiểm tra roster2–4 người/có thể trùng nghề và catalog → tạo GameState300.000/người tạiô0 → chọn đúng3 TP lễ hội cố định khác nhau → chọn ngẫu nhiên người đầu, giữ thứ tự ghế cố định theo Q03 → bắt đầu lượt riêng.
 
-Không cấp 100.000 chỉ vì khởi tạo vị trí ô 0; tiền thưởng gắn với một lần di chuyển hợp lệ qua/dừng ô xuất phát (GAME_RULES §1–2).
+Chỉ cấp thưởng Xuất phát 200.000 khi hành trình hợp lệ đi qua hoặc dừng đúng ô 0. Khởi tạo tại ô 0 chỉ cấp tiền mặt ban đầu theo GAME_RULES §1–2.
 
 ### 6.2. Chu trình
 
@@ -97,7 +97,8 @@ flowchart TD
     Before["Ngay trước lượt mới: hết RentDouble của chủ theo Q05"] --> Start["Bắt đầu lượt riêng"]
     Start --> Jail{"Đang ở tù?"}
     Jail -->|Có| JailChoice["Chọn tung / trả 200.000 / thẻ Ra tù"]
-    JailChoice -->|Tung không đôi| Third{"Lượt tù thứ3?"}
+    JailChoice -->|Tung thử| Trial["Chốt kết quả; Strategist có thể gieo lại trước chốt"]
+    Trial -->|Không đôi| Third{"Lượt tù thứ3?"}
     Third -->|Không| End["Hoàn tất lượt riêng"]
     Third -->|Có| Fee["Nghĩa vụ200.000: thanh lý / phá sản nếu cần"]
     Fee --> Paid{"Sau thanh lý trả được?"}
@@ -107,7 +108,7 @@ flowchart TD
     JailWin -->|Có| Result["Kết thúc trận"]
     JailWin -->|Không| End
     Release --> End
-    JailChoice -->|Tung đôi| Move["Di chuyển bằng kết quả đã chốt"]
+    Trial -->|Đôi| Move["Di chuyển bằng kết quả cuối đã chốt"]
     JailChoice -->|Trả tiền hoặc dùng thẻ| Roll["Gieo hai xúc xắc"]
     Jail -->|Không| Window["Cửa sổ hành động hợp lệ theo luật đã xác nhận"]
     Window --> Roll
@@ -133,16 +134,16 @@ flowchart TD
 
 Các chuyển pha kỹ thuật đề xuất: StartTurn, AwaitJailChoice, AwaitPreRollAction, AwaitRollConfirmation, Moving, ResolvingTile, AwaitDecision, ResolvingObligation, EndTurn, Finished. Pha chờ presentation là một khóa kỹ thuật kèm theo, không tạo lượt riêng mới.
 
-Sơ đồ mô tả nhánh chính, không loại bỏ điểm dùng kỹ năng Q04 hợp lệ trước lựa chọn tung trong tù. P02 chỉ chặn nhánh miễn phí bắt buộc mới; sơ đồ phí ở trên là trường hợp không có miễn nghĩa vụ.
+Sơ đồ mô tả nhánh chính, không loại bỏ checkpoint Q04 trước lựa chọn trong tù. P02 đã duyệt: nếu Lawyer Ultimate miễn phí bắt buộc thì đi thẳng tới bước thả cuối lượt, không thu tiền/di chuyển thêm. Strategist thử ra tù chỉ xét kết quả cuối sau quyết định gieo lại.
 
 - Ra đôi: xử lý xong ô đến rồi mới xét tung thêm; giữ nguyên personalTurnOrdinal, cooldown và thời hạn hiệu ứng. Không có luật ba lần đôi thì vào tù.
 - Q11: vừa vào tù do dừngô8 hoặc thẻ Vào tù khi ra đôi thì hủy quyền gieo thêm và kết thúc lượt. Vẫn xử lý Q09; không bỏ nghĩa vụ đến hạn.
 - Q04: chủ động dùng kỹ năng/bán ở điểm dừng trước gieo hoặc sau hoàn tất ô, không giữa animation/giao dịch. Lawyer Active phản ứng trước thuê của chính người dùng; thanh lý bắt buộc được mở cả ngoài lượt.
 - Strategist Ultimate tiêu thụ một quyền gieo tiếp theo có thật, kể cả quyền thêm do đôi, tạo MovementContext thay vì DiceResult; không để kết quả đôi cũ tạo thêm quyền gieo sau Ultimate. Nếu không có quyền gieo thì không thực hiện.
-- Tù: lúc bị bắt đếm0; mỗi lần bắt đầu lượt khi còn bị giam tăng số lượt tù đã bắt đầu. Lần1/2 tung không đôi thì kết thúc còn tù; lần3 không đôi tạo khoản200.000 bắt buộc. Trả thành công thả cuối lượt, không move, không gieo thêm; thiếu sau thanh lý thì phá sản. Thoát bằng đôi/trả chủ động/thẻ trước nhánh cưỡng bức vẫn đi theo luật thường.
+- Tù: bị bắt đếm0, đầu mỗi lượt còn giam tăng counter. Xét kết quả thử cuối sau gieo lại hợp lệ: lần1/2 không đôi thì còn tù; lần3 không đôi phát sinh200.000, hoặc miễn theo P02. Trả thành công/được miễn thả cuối lượt không move/gieo thêm; thiếu sau thanh lý thì phá sản. Thoát bằng đôi/trả chủ động/thẻ vẫn theo luật thường.
 - Cooldown N chỉ sẵn sàng sau khi hoàn thành N lượt riêng **tiếp theo** của người dùng; không tính lần kết thúc lượt kích hoạt.
 - Trả nợ Banker 110.000 vào cuối lượt riêng thứ 5 tiếp theo; không đếm theo số lần tung.
-- Không dùng tổng số lần tung chia số người để suy ra vòng. Cách biểu diễn tập người chờ Q08 còn PENDING, nhưng thứ tự cuối lượt đã chốt Q09:
+- Không dùng số lần tung chia số người để suy ra vòng. Vòng dựa trên người chưa phá sản; biểu diễn tập chờ Q08 cần rà soát kỹ thuật. Thứ tự Q09:
   1. Giải quyết nghĩa vụ đến hạn; thanh lý/phá sản nếu cần.
   2. Kiểm tra thắng ngay sau thay đổi có thể tạo thắng; dừng nếu trận kết thúc.
   3. Cập nhật mốc lượt riêng, cooldown và effect đến hạn.
@@ -150,6 +151,10 @@ Sơ đồ mô tả nhánh chính, không loại bỏ điểm dùng kỹ năng Q0
   5. Chuyển lượt hoặc xử lý kết quả hết giờ.
 - RentDouble của Entrepreneur không dùng quy tắc hết hạn cuối lượt tiếp theo: hiệu lực ngay và hết ngay **trước** lượt riêng tiếp theo của chủ (Q05). Các effect N lượt riêng khác giữ luật của chúng.
 - Kiểm tra thắng ở các giao dịch trung gian; bước kiểm tra cuối lượt không thay cho kiểm tra tức thời.
+- Q19: mở một batch nghĩa vụ cho toàn bộ đối thủ khi rút thẻ10; người đủ tiền trả ngay, mọi người thiếu cùng có pending obligation theo payer. Không chuyển lượt của họ hoặc tiến lượt người rút khi batch còn chờ. Human chọn thứ tự thanh lý, AI dùng cùng legal API.
+- Q17: khi nguồn effect phá sản, giữ effect qua vòng dở và đổi N lượt còn lại sang N vòng mới hoàn chỉnh tiếp theo. Không đếm vòng dở vào N; quy tắc hủy khi đổi chủ/Hotel vẫn áp dụng.
+- Q14/Q15: một lễ hội tổ chức toàn cục không có deadline lượt, cùng TP/chủ cộng50% thuê gốc mỗi200.000; đổi TP/người tổ chức thay mức cũ bằng50%, đổi chủ xóa. Đây là state riêng với ba festival cố định; không tiếp tục dùng effect2 lượt cũ.
+- Q10: thẻ tới8/24 và dịch vụ đi tiến/thưởng qua0. Không chọn24 cho chính dịch vụ; thẻ đưa lại24 được dùng dịch vụ mới, không chặn cả root chain. Q12 cho Active/Ultimate Kỹ Sư vượt chờ Hotel cùng lần đến; nâng thường vẫn chờ.
 
 ## 7. Animation và thao tác bất đồng bộ
 
@@ -158,7 +163,7 @@ Domain xử lý tuần tự trên luồng điều phối chính; không cần nh
 Đề xuất mỗi hành động có một ActionContext đang chờ:
 
 1. Board tính đường đi, số lần qua ô 0 và vị trí cuối.
-2. Coordinator commit vị trí logic và tiền qua ô 0 một lần, phát MovementPresentation kèm actionId.
+2. Coordinator commit vị trí logic và thưởng 200.000 một lần cho mỗi lần vượt mốc ô 0, kể cả dừng đúng ô này, rồi phát MovementPresentation kèm actionId.
 3. Khóa input hành động khác; view chạy đường đi đã chốt.
 4. Callback đúng actionId chỉ mở bước xử lý ô đến, không cộng tiền hay di chuyển lần nữa. Callback cũ/lặp bị bỏ qua.
 

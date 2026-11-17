@@ -123,7 +123,8 @@ namespace BtlGame.Properties
 
         public static long BankSaleValue(long actualInvestment) => actualInvestment / 2;
 
-        public static IReadOnlyList<long> AllocateInvestment(long actualPaid, PropertyLevel targetLevel)
+        public static IReadOnlyList<long> AllocateInvestment(long actualPaid, PropertyLevel targetLevel,
+            InvestmentTieBreak? tieBreak = null)
         {
             if (actualPaid < 0) throw new ArgumentOutOfRangeException(nameof(actualPaid));
             int tierCount = (int)targetLevel;
@@ -131,6 +132,26 @@ namespace BtlGame.Properties
             int[] weights = targetLevel == PropertyLevel.Stake ? new[] { 1 } : targetLevel == PropertyLevel.House1
                 ? new[] { 2, 1 } : targetLevel == PropertyLevel.House2 ? new[] { 2, 1, 1 }
                 : targetLevel == PropertyLevel.House3 ? new[] { 2, 1, 1, 1 } : new[] { 2, 1, 1, 1, 1 };
+            return AllocateByWeights(actualPaid, weights, 0, tieBreak);
+        }
+
+        public static IReadOnlyList<long> AllocateUpgradeInvestment(long actualPaid,
+            PropertyLevel fromLevel, PropertyLevel targetLevel, InvestmentTieBreak? tieBreak = null)
+        {
+            if (actualPaid < 0) throw new ArgumentOutOfRangeException(nameof(actualPaid));
+            if (!Enum.IsDefined(typeof(PropertyLevel), fromLevel) ||
+                !Enum.IsDefined(typeof(PropertyLevel), targetLevel) || targetLevel <= fromLevel)
+                throw new ArgumentOutOfRangeException(nameof(targetLevel));
+            // Các bậc mới đều có chênh lệch20% giá Nhà3. Không chia lại vốn cũ.
+            var weights = new int[(int)targetLevel - (int)fromLevel];
+            for (int i = 0; i < weights.Length; i++) weights[i] = 1;
+            return AllocateByWeights(actualPaid, weights, (int)fromLevel, tieBreak);
+        }
+
+        private static IReadOnlyList<long> AllocateByWeights(long actualPaid, int[] weights, int firstTier,
+            InvestmentTieBreak? tieBreak)
+        {
+            int tierCount = weights.Length;
             int denominator = 0;
             foreach (int weight in weights) denominator += weight;
             var shares = new long[5];
@@ -138,19 +159,24 @@ namespace BtlGame.Properties
             long allocated = 0;
             for (int i = 0; i < tierCount; i++)
             {
-                long numerator = checked(actualPaid * weights[i]);
-                shares[i] = numerator / denominator;
+                BigInteger numerator = (BigInteger)actualPaid * weights[i];
+                shares[firstTier + i] = (long)(numerator / denominator);
                 remainders[i] = (int)(numerator % denominator);
-                allocated += shares[i];
+                allocated += shares[firstTier + i];
             }
 
             int remainderCount = checked((int)(actualPaid - allocated));
             var order = new List<int>(tierCount);
             for (int i = 0; i < tierCount; i++) order.Add(i);
-            order.Sort((left, right) => remainders[right].CompareTo(remainders[left]));
-            if (remainderCount > 0 && remainderCount < order.Count && remainders[order[remainderCount - 1]] == remainders[order[remainderCount]])
+            order.Sort((left, right) =>
+            {
+                int compare = remainders[right].CompareTo(remainders[left]);
+                return compare != 0 ? compare : tieBreak == InvestmentTieBreak.HighestTierFirst
+                    ? right.CompareTo(left) : left.CompareTo(right);
+            });
+            if (!tieBreak.HasValue && remainderCount > 0 && remainderCount < order.Count && remainders[order[remainderCount - 1]] == remainders[order[remainderCount]])
                 throw new InvalidOperationException("Q13/P01: cần quyết định thứ tự phá hòa trước khi phân bổ vốn.");
-            for (int i = 0; i < remainderCount; i++) shares[order[i]]++;
+            for (int i = 0; i < remainderCount; i++) shares[firstTier + order[i]]++;
             return Array.AsReadOnly(shares);
         }
     }

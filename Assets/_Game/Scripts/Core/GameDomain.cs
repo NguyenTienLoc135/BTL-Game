@@ -7,8 +7,9 @@ namespace BtlGame.Core
     public enum CountryId { Vietnam, Japan, Korea, France, Italy, Usa, UnitedKingdom, Australia }
     public enum PropertyLevel { Stake = 1, House1, House2, House3, Hotel }
     public enum PlayerStatus { Active, Bankrupt }
+    public enum ControllerKind { Human, AI }
     public enum MatchStatus { Running, Finished }
-    public enum TurnPhase { AwaitingRoll, ResolvingLanding, EndTurn, AwaitingJailChoice, AwaitingObligation, AwaitingRuleDecision, Finished }
+    public enum TurnPhase { AwaitingRoll, ResolvingLanding, EndTurn, AwaitingJailChoice, AwaitingObligation, AwaitingRuleDecision, Finished, AwaitingRollConfirmation, Moving }
     public enum MatchDuration { Minutes30, Minutes45, Minutes60, Unlimited }
     public enum ObligationKind { Rent, TaxTile, TaxCard, Gift, BankerDebt, ForcedJailReleaseFee, OtherMandatory }
     public enum ObligationStatus { AwaitingPayment, Settled, Defaulted, Cancelled }
@@ -90,6 +91,8 @@ namespace BtlGame.Core
         public int Id { get; }
         public int SeatIndex { get; }
         public string DisplayName { get; }
+        public RoleId Role { get; }
+        public ControllerKind Controller { get; }
         public long Cash { get; internal set; } = 300_000;
         public int Position { get; internal set; }
         public PlayerStatus Status { get; internal set; } = PlayerStatus.Active;
@@ -105,13 +108,22 @@ namespace BtlGame.Core
         public long BankerDebtAmount { get; internal set; }
 
         public PlayerState(int id, int seatIndex, string displayName, bool hasBankerPassive = false)
+            : this(id, seatIndex, displayName, hasBankerPassive ? RoleId.Banker : RoleId.None)
+        {
+        }
+
+        public PlayerState(int id, int seatIndex, string displayName, RoleId role, ControllerKind controller = ControllerKind.Human)
         {
             if (id < 0) throw new ArgumentOutOfRangeException(nameof(id));
             if (seatIndex < 0 || seatIndex > 3) throw new ArgumentOutOfRangeException(nameof(seatIndex));
             Id = id;
             SeatIndex = seatIndex;
             DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
-            HasBankerPassive = hasBankerPassive;
+            if (!Enum.IsDefined(typeof(RoleId), role)) throw new ArgumentOutOfRangeException(nameof(role));
+            Role = role;
+            if (!Enum.IsDefined(typeof(ControllerKind), controller)) throw new ArgumentOutOfRangeException(nameof(controller));
+            Controller = controller;
+            HasBankerPassive = role == RoleId.Banker;
         }
 
         internal bool HasHeldCard(int cardId) => _heldCards.Contains(cardId);
@@ -131,6 +143,7 @@ namespace BtlGame.Core
         internal long[] MutableInvestedByLevel => _investedByLevel;
         public long BeachInvestment { get; internal set; }
         public long? House3ReachedLandingId { get; internal set; }
+        public long? AcquiredOnLandingId { get; internal set; }
         public long? NormalUpgradeUsedOnLandingId { get; internal set; }
 
         public PropertyState(int tileId)
@@ -196,10 +209,12 @@ namespace BtlGame.Core
         public int ModifierBasisPoints { get; }
         public long? ExpiresAfterSourceTurnOrdinal { get; }
         public long? ExpiresBeforeSourceTurnOrdinal { get; }
+        public long ActivatedSourceTurnOrdinal { get; }
+        public long? ExpiresAfterRoundOrdinal { get; internal set; }
 
         internal TurnEffectState(long id, EffectKind kind, int sourcePlayerId, int? targetPlayerId,
             int? targetTileId, int modifierBasisPoints, long? expiresAfterSourceTurnOrdinal,
-            long? expiresBeforeSourceTurnOrdinal)
+            long? expiresBeforeSourceTurnOrdinal, long activatedSourceTurnOrdinal = 0)
         {
             Id = id;
             Kind = kind;
@@ -209,6 +224,7 @@ namespace BtlGame.Core
             ModifierBasisPoints = modifierBasisPoints;
             ExpiresAfterSourceTurnOrdinal = expiresAfterSourceTurnOrdinal;
             ExpiresBeforeSourceTurnOrdinal = expiresBeforeSourceTurnOrdinal;
+            ActivatedSourceTurnOrdinal = activatedSourceTurnOrdinal;
         }
     }
 
@@ -219,6 +235,7 @@ namespace BtlGame.Core
         private readonly List<MandatoryObligation> _obligations = new List<MandatoryObligation>();
         private readonly List<TurnEffectState> _effects = new List<TurnEffectState>();
         private readonly HashSet<int> _completedTurnsThisRound = new HashSet<int>();
+        private IReadOnlyList<int> _winnerPlayerIds = Array.AsReadOnly(Array.Empty<int>());
         public IReadOnlyList<PlayerState> Players => _players.AsReadOnly();
         public int InitialPlayerCount => _players.Count;
         public IReadOnlyList<PropertyState> Properties
@@ -234,11 +251,14 @@ namespace BtlGame.Core
         public MatchStatus Status { get; internal set; } = MatchStatus.Running;
         public int CurrentPlayerId { get; internal set; }
         public long Revision { get; internal set; }
+        public long CompletedRounds { get; internal set; }
         public WinReason? Result { get; internal set; }
+        public IReadOnlyList<int> WinnerPlayerIds => _winnerPlayerIds;
         public TurnPhase Phase { get; internal set; } = TurnPhase.AwaitingRoll;
         public long CurrentLandingId { get; internal set; }
         public long CurrentActionId { get; internal set; }
         public bool PendingDoubleRoll { get; internal set; }
+        public bool PersonalTurnMustClose { get; internal set; }
         public bool TimeExpired { get; internal set; }
         public bool ClockPaused { get; internal set; }
         public long ClockRemainingTicks { get; internal set; }
@@ -247,15 +267,51 @@ namespace BtlGame.Core
         public IReadOnlyList<MandatoryObligation> Obligations => _obligations.AsReadOnly();
         public IReadOnlyList<TurnEffectState> ActiveEffects => _effects.AsReadOnly();
         public MandatoryObligation PendingObligation { get; internal set; }
+        public bool GiftBatchActive { get; internal set; }
+        public IReadOnlyList<MandatoryObligation> PendingObligations
+        {
+            get
+            {
+                var pending = new List<MandatoryObligation>();
+                foreach (MandatoryObligation obligation in _obligations)
+                    if (obligation.Status == ObligationStatus.AwaitingPayment) pending.Add(obligation);
+                return pending.AsReadOnly();
+            }
+        }
+        internal MandatoryObligation FindPendingForPayer(int playerId)
+        {
+            foreach (MandatoryObligation obligation in PendingObligations)
+                if (obligation.PayerId == playerId) return obligation;
+            return null;
+        }
         public TurnPhase PhaseBeforeObligation { get; internal set; }
         public bool ClockPausedBeforeObligation { get; internal set; }
         public bool CurrentLandingDecisionUsed { get; internal set; }
         public int? RentSettledAtCurrentLandingTileId { get; internal set; }
+        public bool TaxSettledAtCurrentLanding { get; internal set; }
         public bool RoundCompletedAtLastTurnBoundary { get; internal set; }
         public string PendingRuleDecisionId { get; internal set; }
+        public long DecisionId { get; internal set; }
+        public BtlGame.Board.DiceRoll? PendingDiceRoll { get; internal set; }
+        public BtlGame.Board.DiceRoll? LastDiceRoll { get; internal set; }
+        public int? LastDicePlayerId { get; internal set; }
+        public bool PendingJailTrial { get; internal set; }
+        public BtlGame.Board.MovementResult PendingMovement { get; internal set; }
+        public TurnPhase PhaseAfterPresentation { get; internal set; }
+        public bool LandingResolutionStarted { get; internal set; }
+        public bool CardLandingResolved { get; internal set; }
+        public bool TeleportUsedInCurrentChain { get; internal set; }
+        public bool DecisionAllowsSkills { get; internal set; }
+        public long CardDrawOrdinal { get; internal set; }
+        public int? PendingCardId { get; internal set; }
+        private readonly HashSet<int> _cardProcessedPlayerIds = new HashSet<int>();
+        public IReadOnlyCollection<int> CardProcessedPlayerIds => new List<int>(_cardProcessedPlayerIds).AsReadOnly();
+        internal void MarkCardParticipant(int id) => _cardProcessedPlayerIds.Add(id);
+        internal void ResetCardParticipants() => _cardProcessedPlayerIds.Clear();
+        public GameplayDecisions Decisions { get; }
 
         public GameState(IReadOnlyList<PlayerState> players, int firstPlayerId, IReadOnlyList<int> festivalCityIds,
-            MatchDuration duration = MatchDuration.Unlimited)
+            MatchDuration duration = MatchDuration.Unlimited, GameplayDecisions decisions = null)
         {
             if (players == null) throw new ArgumentNullException(nameof(players));
             if (festivalCityIds == null) throw new ArgumentNullException(nameof(festivalCityIds));
@@ -277,6 +333,7 @@ namespace BtlGame.Core
                 if (BoardCatalog.Get(id).Kind == TileKind.City || BoardCatalog.Get(id).Kind == TileKind.Beach)
                     _properties[id] = new PropertyState(id);
             CurrentPlayerId = firstPlayerId;
+            Decisions = decisions ?? GameplayDecisions.Approved;
             Duration = duration;
             if (duration == MatchDuration.Unlimited) ClockRemainingTicks = long.MaxValue;
             else if (duration == MatchDuration.Minutes30) ClockRemainingTicks = TimeSpan.FromMinutes(30).Ticks;
@@ -308,5 +365,20 @@ namespace BtlGame.Core
             return true;
         }
         internal void ResetRound() => _completedTurnsThisRound.Clear();
+
+        internal void SetWinners(IReadOnlyList<int> playerIds)
+        {
+            if (playerIds == null || playerIds.Count == 0)
+                throw new ArgumentException("Kết quả phải có người thắng.", nameof(playerIds));
+            var ids = new HashSet<int>();
+            var copy = new List<int>();
+            foreach (int id in playerIds)
+            {
+                GetPlayer(id);
+                if (!ids.Add(id)) throw new ArgumentException("Người thắng bị trùng.", nameof(playerIds));
+                copy.Add(id);
+            }
+            _winnerPlayerIds = copy.AsReadOnly();
+        }
     }
 }
