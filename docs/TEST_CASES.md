@@ -1,13 +1,13 @@
 # Đặc tả test — Cờ Tỷ Phú RPG
 
-Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc Unity; không có trạng thái PASS.** Nguồn: quyết định người dùng mới đã phê duyệt → [Word đã đọc](references/GAME_DESIGN_DOCUMENT.docx) → [GAME_RULES](GAME_RULES.md) → các tài liệu kỹ thuật. Bảy Q và tù3 lượt cập nhật theo [DECISIONS](DECISIONS.md).
+Ngày cập nhật: **2026-11-17**. **Đây là đặc tả, không tự đánh dấu mọi ca PASS theo số test code đã chạy.** Nguồn: quyết định mới người dùng → Word cho phần không đổi → GAME_RULES → tài liệu kỹ thuật. Oracle mới/lịch sử tại DECISIONS, kết quả A/D thực tế tại README.
 
 ## 1. Cách đọc và fixture
 
-- ID L/S/C giữ từ bản trước; D04/D05/D06/D09/D11/D13/D20 nay có expected result APPROVED dù vẫn giữ ID D để truy vết. F là ca bổ sung Q; J là ca tù3 lượt. Tất cả chỉ là đặc tả, chưa thực thi. Các số là kết quả áp dụng nguồn có hiệu lực.
-- A/B/C/D là PlayerId trong fixture domain, không xác nhận số người tối thiểu hoặc quyền trùng nghề trong màn Setup (Q03).
+- ID L/S/C/D/F/J giữ để truy vết, không suy ra trạng thái từ tiền tố D. §9e bổ sung oracle ngày2026-11-17; chỉ Q02 thiếu chính sách deck. Có test code cho nhiều hành vi nhưng chưa ánh xạ mọi dòng này sang kết quả chạy.
+- A/B/C/D là PlayerId fixture; Setup đã chốt2–4 người, được trùng nghề, người đầu ngẫu nhiên rồi thứ tự ghế cố định Q03.
 - Nếu test không nói khác: A là Nhà Chiến Lược, B là Banker, còn hoạt động; không có hiệu ứng/thẻ/độc quyền; TP đang xét không thuộc ba festival cố định; không kết thúc vòng chung trong hành động đó. Mỗi test khởi tạo riêng, không nối trạng thái từ dòng trước.
-- Không bỏ Passive/Weakness của nghề. Test nghề khác ghi rõ role được thay; những người có mặt trong fixture dùng role khác nhau. Nhà Chiến Lược/Banker được dùng ở test kinh tế vì không sửa giá/thuê ngay thời điểm đó.
+- Không bỏ Passive/Weakness. Fixture mặc định dùng nghề khác nhau để dễ nhận diện, không cấm sản phẩm trùng nghề. Strategist/Banker dùng ở test kinh tế vì không sửa giá/thuê ngay thời điểm đó.
 - Vốn [Cọc, Nhà1, Nhà2, Nhà3, Hotel] tính bằng đồng. Giá niêm yết tách vốn thực; người trả và nhận ghi tiền trước/sau khi cần.
 - RNG dùng kết quả được cấp trước trong fixture; đây là cách kiểm thử, không chốt thuật toán random/deck của game.
 - Chữ “từ chối” nghĩa là không đổi tiền/chủ/cấp/thẻ/skill nếu hành động chưa thực hiện hợp lệ. “Không hiệu lực” của thẻ không tự quyết định thẻ đi đâu trong deck (Q02).
@@ -39,7 +39,7 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | L15 / §3–4 | B sở hữu cả13 và15 (Pháp), Hà Nội không liên quan; Paris Nhà3 | Tính thuê Paris | Thuê gốc111.000; +20% độc quyền →133.200 |
 | L16 / §3–4 | B chỉ sở hữu Paris Nhà3, Lyon chưa chủ | Tính thuê Paris | 111.000; không +20% |
 | L17 / §4.2 | Hà Nội Nhà3 của B, là festival cố định; không độc quyền | Tính thuê | 45.000 |
-| L18 / §4.2 | Hà Nội Nhà3 của B: độc quyền Việt Nam, festival cố định và festival tạm còn hiệu lực | Tính thuê | 30.000 × (1+20%+50%+50%) =66.000; không nhân ba buff nối tiếp |
+| L18 / §4.2 | Hà Nội Nhà3 của B: độc quyền Việt Nam, festival cố định và lễ hội tổ chức hiện+50% | Tính thuê | 30.000×(1+20%+50%+50%)=66.000; không nhân buff nối tiếp |
 | L19 / §4.2 | Hà Nội Nhà1 của B; B độc quyền Việt Nam và TP là festival cố định | Tính thuê | 12.500 ×1,7 =21.250; không làm tròn trung gian |
 | L20 / §5 | B có lần lượt 1/2/3 biển ở ba fixture, không modifier nghề | A dừng trên một biển của B | Thuê mỗi biển lần lượt50.000/100.000/150.000 |
 | L21 / §5 | A cash1.000.000; từng biển chưa chủ ở fixture riêng | Mua biển4/14/18/25 | Trả100.000/130.000/160.000/190.000; vốn thực đúng số trả, không có cấp nhà |
@@ -92,8 +92,8 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | L53 / §7.3 | A ô24, cash200.000; chọn đường đi hợp lệ qua25…31→0→1; Hà Nội chưa chủ | Trả100.000 dịch chuyển đếnô1, bỏ mua | Trừ 100.000 phí dịch chuyển, thưởng 200.000 đúng một lần qua ô0. Cash 300.000, vị trí1 và kích hoạt lựa chọn mua |
 | L54 / §7.3 | A ô24, cash200.000; biển25 chưa chủ | Trả100.000 dịch chuyển đếnô25, bỏ mua | Cash 100.000 sau khi trả phí. Hành trình không qua ô0 nên thưởng bằng 0. Xử lý ô biển25 |
 | L55 / §7.3,8 | A đã đếnô24 từ thẻ; cash200.000 | Chọn dùng chức năng dịch chuyển đếnô25, bỏ mua | Dịch vụ vẫn thu100.000; không miễn phí vì đến từ thẻ |
-| L56 / §7.4 | A cash300.000 tạiô16, sở hữu Hà Nội; chưa có festival tạm | Chọn Hà Nội và xác nhận lễ hội | Cash100.000; Hà Nội có +50% trong2 lượt riêng tiếp theo của A; không áp biển |
-| L57 / §4.2,9 | A tạo festival tạm ở lượt k; đang ở phần cuối lượt k, sau đó có nhiều lần đôi; tiếp tục tới cuối k+1 và k+2 | Theo dõi mốc hoàn tất lượt | Cuối k không tính một lượt tiếp theo; đôi không rút thời hạn; hiệu lực còn qua khoảng đối thủ xen giữa và hết sau khi hoàn tất k+2 |
+| L56 / §7.4, Q14 mới | A300.000 tạiô16, có Hà Nội; chưa có lễ hội tổ chức | Chọn Hà Nội, trả200.000 | A100.000; Hà Nội là lễ hội tổ chức toàn trận,+50% thuê gốc, không hết sau2 lượt, không áp biển |
+| L57 / §4.2, Q14 mới | Hà Nội có lễ hội tổ chức+50% từ lượt k; không đổi chủ/không tổ chức TP khác | Qua nhiều đôi và hoàn tất k+1,k+2,k+3 | Vẫn+50%, không có TTL2 lượt; ba lễ hội cố định tách riêng |
 | L58 / §7.4 | A cash300.000, chỉ sở hữu biển4; không TP | Chọn biển4 cho lễ hội | Mục tiêu không hợp lệ; không trừ200.000 |
 
 ## 7. Đủ 14 thẻ sự kiện
@@ -106,12 +106,12 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | C04 / §8, thẻ4 | A có Giảm thuê; thuê Hà Nội Nhà3 của B là30.000; A100.000, B0 | Chủ động dùng thẻ và thanh toán | A85.000, B15.000; thẻ hết; không giảm tiền cưỡng chế |
 | C05 / §8, thẻ5 | B có Bảo vệ; Hà Nội Nhà2 vốn80.000 | A Phá tài sản vào Hà Nội | Tự dùng một Bảo vệ; TP/cấp/vốn giữ nguyên; không hoàn80.000 |
 | C06 / §8, thẻ6 | Fixture L38 | Rút Nộp phạt thuế | Thuế45.000 cho Lawyer; không coi là tiền thuê |
-| C07 / §8, thẻ7 | A không bị giam | Rút Vào nhà tù | Vị trí8 và isJailed=true; tiền qua0 chưa có kỳ vọng, xem D10 |
+| C07 / §8, thẻ7, Q10 | A không bị giam tại28, cash100.000 | Rút Vào nhà tù | Đi tiến qua0 tới8, nhận 200.000 và có cash300.000. Bị giam/counter0, mất quyền gieo thêm |
 | C08 / §8, thẻ8 | A chưa có Ra tù, không bị giam | Rút Ra tù | Thêm một thẻ vào set giữ; chưa tự sử dụng |
 | C09 / §8, thẻ9 | Fixture L32 | Giải quyết Phá tài sản | Hoàn100% vốn80.000 từ ngân hàng, TP về chưa chủ |
 | C10 / §8, thẻ10 | A100.000; B200.000; C300.000; Dđã phá sản; không miễn trừ, đủ tiền | A rút Quà từ đối thủ | B100.000, C200.000, A300.000; D không phải trả |
-| C11 / §8, thẻ11 | A tại một ô thẻ; không hiệu ứng liên quan | Rút Đến ô dịch chuyển | Vị trí24; có lựa chọn trả100.000 để dùng dịch vụ; tiền qua0 trên chặng thẻ chờ D10 |
-| C12 / §8, thẻ12 | A300.000, sở hữu Hà Nội, chưa festival tạm | Rút Tổ chức lễ hội; chọn trả phí và Hà Nội | A100.000; effect+50%/2 lượt riêng; cùng luật ô16 |
+| C11 / §8, thẻ11, Q10 | A tại28, cash100.000, không effect khác | Rút Đến ô dịch chuyển, chưa dùng dịch vụ | Đi tiến qua0 tới24, nhận 200.000 và có cash300.000. Dùng dịch vụ vẫn trả100.000 |
+| C12 / §8, thẻ12, Q14 | A300.000 có Hà Nội; lễ hội tổ chức cũ ở TP khác | Trả200.000 tổ chức Hà Nội | A100.000; xóa lễ hội tổ chức cũ, Hà Nội+50% không TTL; đúng cùng cơ chế ô16 |
 | C13 / §8, thẻ13 | A dùng thẻ ở lượt k; B có Hà Nội Nhà3 | Chọn Hà Nội; đi qua nhiều lần tung đôi, hoàn tất k+1,k+2,k+3 | Không thu thuê khi effect còn hiệu lực; đôi không đếm; hết sau cuối k+3 của A, không theo lượt B |
 | C14 / §8, thẻ14 | A300.000, B100.000, không miễn trừ | A chọn tặng B200.000 | A100.000, B300.000 |
 | C15 / §8 | A giữ đủ {Miễn thuế, Giảm thuê, Bảo vệ, Ra tù} | Rút thêm Miễn thuế | Vẫn đúng4 thẻ, mỗi loại1; bỏ lá mới; chưa quyết định deck destination |
@@ -154,6 +154,7 @@ Ngày cập nhật: 2026-11-06. **Chưa có test code, chưa chạy test hoặc 
 | S27 / §9 chung | Engineer không có TP hợp lệ; Active sẵn sàng | Thử nâng miễn phí | Từ chối; cooldown không khởi động; tiền/cấp không đổi |
 | S28 / §9 chung | Một Ultimate đã dùng thành công | Gửi yêu cầu dùng lại Ultimate | Từ chối; không tạo hiệu quả lần hai |
 | S29 / §9 Investor | A Investor300.000, biển4 chưa chủ; hai fixture không coupon / có coupon Active15% đã kích hoạt hợp lệ | Mua biển4 từ ngân hàng | Không coupon trả90.000, còn210.000; có coupon trả75.000, còn225.000 và dùng coupon. Passive/Active áp giá mua BĐS ngân hàng, khác câu hỏi thuê biển Q07 |
+| S30 / ENTREPRENEUR-FORCE | A Entrepreneur300.000 dừng Hà Nội Nhà3 của B Banker0; không buff/độc quyền/festival | Trả thuê30.000 rồi cưỡng chế | Cưỡng chế đúng200.000, không205.000/210.000; A70.000/B230.000; vốn[80.000,40.000,40.000,40.000,0] |
 
 ## 9. Thắng, hết giờ và presentation
 
@@ -207,15 +208,17 @@ Giữ ID gốc để truy vết, **không còn bị chặn bởi bảy câu hỏ
 | F12 / Q20 | AI hoặc Human đang popup cưỡng chế, clock còn5 giây | Chờ7 giây thực trước chọn Mua/Bỏ qua | Clock vẫn5 ở cả hai controller; không tự đóng popup để kết thúc trận |
 | F13 / Q20 | Clock hết, A Engineer đang giải quyết lần dừngô1; ô2 của A không liên quan chuỗi; Active sẵn sàng | Thử dùng Active mới nângô2 | Từ chối hành động chủ động không liên quan; cooldown/ô2 không đổi; vẫn tiếp tục popup/hiệu ứng củaô1 |
 | F14 / Q20 | Chuỗi lần dừng đã đưa A tới24 bằng thẻ, cash300.000; clock hết; biển25 chưa chủ, không qua0 khi đi24→25 | Chọn dịch chuyển100.000 tới25 và mua biển190.000 | Vẫn xử lý cả hai lựa chọn, A còn10.000, sở hữu25 với vốn190.000; không gieo mới, rồi xử lý Q09 và kết quả |
+| F15 / Q14 mới | Hà Nội có lễ hội tổ chức+50% của A, A400.000; hai lần dừng tổ chức hợp lệ | Mỗi lần trả200.000 tổ chức lại Hà Nội | Lần đầu cash200.000/bonus100%; lần sau cash0/bonus150% thuê gốc; không nhân1,5 tuần tự, không TTL |
+| F16 / Q14 mới | Hà Nội có lễ hội tổ chức+150% của A; B300.000 tại16, có Sydney | B trả200.000 tổ chức Sydney | B100.000; Hà Nội mất toàn bộ bonus tổ chức, Sydney bắt đầu+50%; ba festival cố định không đổi |
 
 ## 9c. Nhà tù tối đa ba lượt riêng — luật mới JAIL-03
 
-Những nhánh miễn phí bắt buộc bằng skill còn P02; các ca dưới không có miễn nghĩa vụ. Phí trả chủ động trước lần thử và phí bắt buộc sau lần thử không đôi ở lượt tù thứ3 là hai continuation khác nhau.
+J01–J11 không có miễn nghĩa vụ; P02 đã chốt miễn phí bắt buộc/thả cuối lượt ở D22. Phí trả chủ động trước thử khác phí sau kết quả cuối không đôi ở lượt tù3; J12/J13 kiểm tra gieo lại thử tù mới được duyệt.
 
 | ID / nguồn | Trạng thái đầu vào | Hành động | Kết quả mong đợi |
 |---|---|---|---|
 | J01 / JAIL-03, Q11 | A chưa tù, đang lượt k, ô6 | Tung đôi(1,1) và dừng8 | Bị giam, counter0; lượt k không là lượt tù1; mất gieo thêm và chạy cuối lượt |
-| J02 / JAIL-03, Q11 | A chưa tù, ô18 | Tung(1,1) tới20, rút Vào nhà tù | Ô8, bị giam, counter0; hủy gieo thêm. Không assert tiền qua0 của chặng thẻ còn Q10 |
+| J02 / JAIL-03, Q10/Q11 | A ô18 chưa tù, cash300.000 | Tung(1,1) tới20, rút Vào tù | Đi tiến20→8 qua0, cash500.000. Bị giam/counter0, hủy gieo thêm |
 | J03 / JAIL-03 | A bắt đầu lượt riêng kế tiếp sau khi bị bắt, cash300.000 | Chọn thử(1,2) | Lượt tù1, còn tù ô8, không trừ200.000; kết thúc lượt |
 | J04 / JAIL-03 | A đã qua lượt tù1, bắt đầu lần thứ2, cash300.000 | Chọn thử(2,3) | Lượt tù2, còn tù, cash300.000; chưa thu phí bắt buộc |
 | J05 / JAIL-03 | A đã qua2 lượt tù, cash300.000 | Lượt tù3 thử(1,2), thanh toán bắt buộc | Trả200.000 còn100.000; thả cuối lượt3, vị trí8, không dùng tổng3 để đi và không gieo thêm; lượt riêng sau mới đi |
@@ -224,7 +227,9 @@ Những nhánh miễn phí bắt buộc bằng skill còn P02; các ca dưới k
 | J08 / JAIL-03, Word | A ở lượt tù3, cash300.000; ô10 chưa chủ | Thử(1,1) rồi bỏ mua ở10 | Ra tù bằng đôi, đến10, cash300.000, được gieo thêm; không phát sinh phí bắt buộc |
 | J09 / JAIL-03, Word | A bắt đầu lượt tù3, cash300.000; ô11 chưa chủ | Chọn trả200.000 trước thử, rồi gieo(1,2), bỏ mua | Cash100.000; ra tù và đến11 trong lượt này; không dùng nhánh thả cuối lượt không đi |
 | J10 / JAIL-03, Word | A lượt tù3, cash0, có Ra tù; ô11 chưa chủ | Dùng thẻ rồi gieo(1,2), bỏ mua | Thẻ mất, không trừ tiền; ra tù và đi11 ngay; cash0 không tự gây phá sản |
-| J11 / JAIL-03, Q11 | A đang lượt tù2 | Thử(6,6) ra tù, đến20 rồi rút Vào tù | Đợt giam cũ kết thúc; bị bắt lại counter0; lượt này kết thúc, không giữ quyền gieo đôi cho đợt mới; chặng thẻ không assert tiền qua0 |
+| J11 / JAIL-03, Q10/Q11 | A lượt tù2, cash300.000 | Chốt thử(6,6) ra tù tới20 rồi rút Vào tù | Thẻ đi tiến qua0, cash500.000. Bắt lại counter0, lượt kết thúc, không giữ quyền đôi |
+| J12 / JAIL-REROLL | A Strategist lượt tù3, cash300.000, Active sẵn; kết quả đầu(1,2) | Active chốt lại(1,1) | Chỉ xét đôi mới: ra tù tới10, không thu200.000, có quyền gieo thêm; cooldown5 bắt đầu, không dùng tổng3 cũ |
+| J13 / JAIL-REROLL | A Strategist lượt tù3, cash300.000, Active sẵn; kết quả đầu(1,1) | Active chốt lại(1,2) | Phải nhận không đôi mới: trả200.000 còn100.000, thả cuối lượt tại8, không đi/gieo thêm; cooldown5 bắt đầu |
 
 ## 9d. Ca có đủ căn cứ Word, không là phê duyệt Q mới
 
@@ -234,31 +239,38 @@ Các ca dưới có phạm vi fixture cụ thể đủ luật Word và không b�
 |---|---|---|---|
 | D07 / Word §2.2, §3.2i, §4.1/4.3b | B Entrepreneur có1 biển, Active còn hiệu lực; A có thẻ Giảm thuê; không effect khác | A chọn dùng thẻ và trả thuê biển | 50.000×(1+10%+30%−50%)=45.000; thẻ bị dùng, không nhân liên tiếp các phần trăm |
 | D08 / Word §3.2a, §4.1/4.3e; Q09 | A đã xong lượt, B Engineer đã phá sản trước lượt, C Banker100.000 là người còn lại của vòng; không nợ/effect đến hạn | C kết thúc lượt | A/C đều hoàn tất lượt nên hết vòng; C nhận1.000 lãi, cash101.000; không đợi B đã bị loại |
-| D18 / Word §3.2g, §4.3d; Q06 | A Lawyer Ultimate đang hiệu lực trong lượt mình, cash300.000, rút Tặng quà200.000 cho B | Xử lý nghĩa vụ quà với miễn sẵn có | Nghĩa vụ bắt buộc được hủy, A/B không chuyển tiền; không tiêu thêm biện pháp chủ động. Không áp oracle này cho phí tù mới P02 |
+| D18 / Word §3.2g/§4.3d; Q06 | A Lawyer Ultimate có hiệu lực trong lượt mình, cash300.000; Tặng quà200.000 cho B | Xử lý nghĩa vụ quà | A/B không chuyển tiền, không tiêu thêm biện pháp; phí tù bắt buộc nay có ngoại lệ riêng P02/D22 đã duyệt |
+
+## 9e. Oracle bổ sung được người dùng duyệt ngày2026-11-17
+
+Giữ ID gốc để truy vết. Các dòng này không còn bị chặn bởi câu hỏi cũ; đây là expected result theo quyết định mới, không tự đánh dấu test đã RUN/PASS.
+
+| ID / nguồn | Trạng thái đầu vào | Hành động | Kết quả mong đợi |
+|---|---|---|---|
+| D03 / Q03 APPROVED | Fixture Setup1 người; fixture2–4 người có thể trùng nghề, RNG fixture chọn B làm người đầu | Tạo trận, đi qua lượt |1 người bị từ chối;2–4 hợp lệ kể cả trùng nghề. Người đầu là B theo RNG; sau đó theo ghế cố định, bỏ qua người phá sản, không random lại mỗi lượt |
+| D10 / Q10 APPROVED | Hai fixture A ô28, cash100.000, không effect khác | Rút Vào tù / Đến dịch chuyển | Cả hai đi tiến qua0, nhận 200.000 và có cash300.000. Tương ứng tới8 và bị giam hoặc tới24 và có lựa chọn dịch vụ trả100.000. Dịch vụ không chọn24. Thẻ đưa về24 lần nữa thì được dùng dịch vụ tiếp |
+| D12 / Q12 APPROVED | Hai fixture A Engineer vừa mua Hà Nội Nhà3 giá100.000, cash còn200.000, vốn100.000; đã xử lý xong ô, đúng cửa sổ skill | Active / Ultimate lên Hotel trong cùng lần đến | Active lên Hotel miễn phí, cash200.000/vốn Hotel0, cooldown7. Ultimate trả10.000, cash190.000/vốn Hotel10.000, Ultimate dùng một lần. Nâng thường cùng lần vẫn bị từ chối |
+| D14 / Q14 APPROVED | Hà Nội đang là lễ hội tổ chức+50% của A, A400.000 tại lựa chọn tổ chức hợp lệ | Trả200.000 tổ chức lại cùng Hà Nội | A200.000, bonus tổ chức100% thuê gốc, không TTL; không tạo hai lễ hội tổ chức song song. Chọn TP khác/người khác tổ chức thì bỏ mức cũ, bắt đầu50% |
+| D15 / Q15 APPROVED | Hà Nội Nhà3 của A0, lễ hội tổ chức+50%, không fixed/độc quyền; B Banker500.000 dừng vào | B trả thuê45.000 rồi cưỡng chế200.000 | A245.000/B255.000; chủ B, mức Nhà3 giữ. Lễ hội tổ chức bị xóa ngay, thuê về30.000; ba festival cố định của trận không đổi |
+| D16 / Q16 APPROVED | A Investor còn coupon15% chưa dùng, cooldown đã hết | Thử dùng Active lần nữa | Từ chối; coupon vẫn một, không cộng/ghi đè, không tiêu tài nguyên/khởi động lại cooldown. Lần mua ngân hàng tiếp vẫn chỉ giảm tổng25% |
+| D17 / Q17 APPROVED | A tạo Cúp điện lên TP B, còn2 lượt hiệu lực khi A phá sản trong vòng R đang dở; tài sản B không đổi chủ/Hotel | Hoàn tất R rồi các vòng mới R+1,R+2 | Effect giữ qua cuối R; R+1 hoàn tất còn1 vòng, hết sau R+2. Không đợi lượt A đã bị loại; đổi chủ/Hotel vẫn hủy ngay theo luật riêng |
+| D19 / Q19 APPROVED | A100.000 rút thẻ10; B50.000 có Hà Nội Nhà3 vốn100.000; C200.000; D30.000 có Tokyo Nhà3 vốn200.000; không miễn trừ/thắng tức thời khác | Mở batch, rồi B/D thanh lý qua API riêng | Ngay lập tức C trả100.000: A200.000/C100.000; B/D cùng có nghĩa vụ100.000, A chưa tiếp tục. B bán nhận50.000 rồi trả: A300.000/B0, D vẫn chờ. D bán nhận100.000 rồi trả: A400.000/D30.000, batch xong. Không tăng lượt/cooldown B/D; họ tự chọn tài sản, không bắt theo ghế |
+| D21 / P01 APPROVED |103 đồng phân vốn theo40:20:20:20, ba phần lẻ0,6 bằng nhau | Chia hai đồng dư theo bậc thấp trước | [41,21,21,20,0], tổng103; không mất đồng, ưu tiên Nhà1 rồi Nhà2 trong nhóm đang hòa |
+| D22 / P02 APPROVED | A Lawyer Ultimate có hiệu lực, cash300.000, lượt tù3 chốt không đôi | Giải quyết phí bắt buộc200.000 | Miễn phí, cash300.000; thả cuối lượt tại8, không di chuyển/gieo thêm. Lượt riêng kế tiếp mới đi; nợ Banker vẫn không miễn |
 
 ## 10. Test PENDING còn bị chặn
 
-Các mục dưới chưa có phê duyệt bổ sung hoặc chi tiết hợp đồng; không tự đặt kết quả. Việc giữ PENDING không có nghĩa Word hoàn toàn không có nội dung liên quan; phải đọc phần đã rõ trước khi hỏi nhóm. Bảy D đã APPROVED được chuyển sang §9a, không để lẫn trong bảng này.
+Chỉ phần Q02 chưa có quyết định sản phẩm; không dùng fixture thẻ xác định làm oracle phân phối hoặc shuffle. Các Q/P đã được duyệt chuyển sang §9a/§9e.
 
-| ID / quyết định | Trạng thái đầu vào | Hành động cần test | Kết quả còn phải xác nhận |
+| ID / nguồn | Trạng thái đầu vào | Hành động cần test | Kết quả còn phải xác nhận |
 |---|---|---|---|
-| D02 / Q02 | Trình tự thẻ đã hết, một số loại đang được giữ | Rút tiếp và xem trước thẻ | Cách tái tạo deck, xác suất, vị trí lá bỏ; chưa có oracle |
-| D03 / Q03 | Setup1 người hoặc hai người chọn cùng nghề | Xác nhận tạo trận | Số tối thiểu, trùng nghề, người đầu tiên; không mặc định cho phép/từ chối |
-| D10 / Q10 | A ô28, cash100.000 | Rút Vào tù hoặc Đến dịch chuyển | Việc chặng thẻ có đi qua ô0 hay không vẫn chờ Q10. Nếu hành trình hợp lệ qua ô0 thì thưởng 200.000 theo START-200K |
-| D12 / Q12 | A Engineer vừa mua Hà Nội Nhà3 ở cùng lần đến | Dùng Active nâng Hotel | Ngoại lệ “khi hợp lệ” có vượt điều kiện lần dừng sau hay không |
-| D14 / Q14 | Hà Nội đã có festival tạm còn1 lượt, A đủ200.000 | Mua festival tiếp trên cùng TP | Từ chối hay gia hạn/thay thế; tuyệt đối không tự cho hai effect chồng |
-| D15 / Q15 | Hà Nội có festival tạm do A tạo; B cưỡng chế thành công | Tiếp tục thời hạn/thuê | Festival tạm còn hay mất, nguồn đếm lượt theo ai |
-| D16 / Q16 | Investor còn coupon15% chưa dùng, cooldown đã hết | Dùng Active lần nữa | Cấm, thay thế hay tích; mức giảm lần mua kế tiếp chưa chốt |
-| D17 / Q17 | A đã tạo Cúp điện lên TP B rồi A phá sản trước khi hết3 lượt | Đến lượt các người còn lại | Effect bị hủy hay cách xác định hết hạn khi source không còn lượt |
-| D19 / Q19 | A rút Quà từ đối thủ; B/C thiếu tiền, có thể phải thanh lý hoặc phá sản; chưa ai thắng lúc bắt đầu | Giải quyết từng người trả | Thứ tự xử lý từng đối thủ chưa chốt nên chưa có oracle đầy đủ; khi đã có thắng tức thời phải dừng ngay theo Q09/Q20 |
-| D21 / P01 PENDING | Fixture phân vốn103 đồng theo40:20:20:20, có ba phần lẻ0,6 bằng nhau | Phân hai đồng dư sau phần nguyên | Tổng103 phải bảo toàn; vector theo đúng thứ tự phá hòa chờ nhóm chỉ hướng, không tự chọn hai bậc nhận dư |
-| D22 / P02 PENDING | A Lawyer Ultimate còn hiệu lực, lượt tù3 thử không đôi, cash300.000 | Xử lý ForcedJailReleaseFee200.000 và quyết định thả | Chưa chốt có được miễn phí bắt buộc mới và miễn có thả cuối lượt không; không tự đặt số trả hoặc trạng thái thả |
+| D02 / Q02 | Trình tự thẻ hết, một số thẻ đang được giữ | Rút tiếp và xem trước | Phân phối/số bản sao, shuffle/tái tạo, lá bỏ/rút trùng đi đâu và preview khi tái tạo; chưa có oracle |
 
-Q01 không tạo test gameplay; Word hiện có và đã đọc.
+Q01 giữ truy vết tài liệu, không tạo test gameplay; Word hiện có. Q07/Q08/Q18 đã có phạm vi oracle cụ thể ở §9d, không hỏi lại luật đã rõ.
 
-## 11. Cách đưa vào kiểm thử sau này
+## 11. Cách kiểm chứng implementation
 
-1. Tách test công thức/validator/chuyển trạng thái plain C# và test presentation Unity; chưa cài package trong nhiệm vụ này.
-2. Dùng RNG/thẻ cấp trước; assert trạng thái trước/sau, tiền cả hai phía, vốn từng bậc và tài nguyên bị dùng.
-3. Bảy Q đã APPROVED dùng oracle cập nhật §9a; Q/P còn PENDING chờ đúng nhánh thiếu. Không bỏ qua test bằng kết quả tự đoán, không đổi yêu cầu cũ cho test xanh.
-4. Báo cáo riêng: đặc tả đã rà soát, test tự động đã chạy, Unity đã chạy, build đã chạy. Hiện tài liệu này chỉ đạt mức **đặc tả đã soạn**, không có kết quả test thực thi.
+1. Tách test công thức/validator/chuyển trạng thái plain C# khỏi presentation Unity; dùng framework hiện có, không tự cài thêm package.
+2. Dùng RNG/thẻ cấp trước, kiểm tra tiền hai phía, vốn từng bậc, tài nguyên, actor/pha, batch và callback một lần.
+3. Dùng oracle cập nhật theo DECISIONS; chỉ chặn nhánh thật sự còn thiếu Q02. Không thay expected result để làm code xanh hoặc phê duyệt ngầm API kỹ thuật.
+4. Báo riêng kết quả tự động, Unity Editor, kiểm thử trực quan và build. README lưu mốc test đã chạy; danh sách đặc tả này không tự chuyển mọi dòng sang PASS.
