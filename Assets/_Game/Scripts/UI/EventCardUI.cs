@@ -1,67 +1,24 @@
 using System;
 using BTLGame.Cards;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BTLGame.UI
 {
     public sealed class EventCardUI : MonoBehaviour
     {
-        [SerializeField] private TextMeshProUGUI _titleText;
-        [SerializeField] private TextMeshProUGUI _descriptionText;
-        [SerializeField] private Button _confirmButton;
+        [SerializeField] private DecisionPopupUI _decisionPopup;
 
-        public event Action CardConfirmed;
-
-        private void Awake()
+        public void ShowCard(EventCardData card, DecisionPrompt prompt)
         {
-            if (_confirmButton == null)
-            {
-                Debug.LogError(
-                    $"{nameof(EventCardUI)} requires a confirm button reference.",
-                    this);
-                return;
-            }
-
-            _confirmButton.onClick.AddListener(HandleConfirmClicked);
+            if (card == null) throw new ArgumentNullException(nameof(card));
+            if (prompt == null || (prompt.Kind != DecisionPromptKind.EventCard && prompt.Kind != DecisionPromptKind.EventCardTargetSelection))
+                throw new ArgumentException("Cần prompt thẻ hoặc chọn mục tiêu hợp lệ.", nameof(prompt));
+            if (prompt.ContextId != ((int)card.Id).ToString())
+                throw new ArgumentException("ContextId của prompt không khớp CardId.", nameof(prompt));
+            if (_decisionPopup == null) throw new InvalidOperationException("Chưa gán DecisionPopupUI.");
+            _decisionPopup.Show(prompt, card.Title, card.Description);
         }
 
-        private void OnDestroy()
-        {
-            if (_confirmButton != null)
-            {
-                _confirmButton.onClick.RemoveListener(HandleConfirmClicked);
-            }
-        }
-
-        public void ShowCard(EventCardData cardData)
-        {
-            if (cardData == null)
-            {
-                Debug.LogError(
-                    $"{nameof(EventCardUI)} cannot display a null card.",
-                    this);
-                return;
-            }
-
-            if (_titleText == null || _descriptionText == null)
-            {
-                Debug.LogError(
-                    $"{nameof(EventCardUI)} requires title and description references.",
-                    this);
-                return;
-            }
-
-            _titleText.text = cardData.Title;
-            _descriptionText.text = cardData.Description;
-            gameObject.SetActive(true);
-        }
-
-        private void HandleConfirmClicked()
-        {
-            gameObject.SetActive(false);
-            CardConfirmed?.Invoke();
-        }
+        public void Configure(DecisionPopupUI decisionPopup) => _decisionPopup = decisionPopup;
     }
 }

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 486f1a1aad4d6294da8a25e373cc77a3, type: 3}
+  m_Name: EventCard_13
+  m_EditorClassIdentifier: Assembly-CSharp::BTLGame.Cards.EventCardData
+  _id: 13
+  _title: "C\xFAp \u0111i\u1EC7n"
+  _description: "Ch\u1ECDn th\xE0nh ph\u1ED1 \u0111\u1ED1i th\u1EE7 ch\u01B0a l\xE0 Kh\xE1ch s\u1EA1n; ch\u1EE7 kh\xF4ng thu thu\xEA trong ba l\u01B0\u1EE3t ri\xEAng ti\u1EBFp theo c\u1EE7a ng\u01B0\u1EDDi d\xF9ng."
+  _actionKind: 12
+  _canBeHeld: 0
