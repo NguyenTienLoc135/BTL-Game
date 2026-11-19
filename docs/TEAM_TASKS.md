@@ -1,10 +1,10 @@
 # Phân công chính thức và kế hoạch tích hợp
 
-Cập nhật: 2026-11-14. **Người dùng đã đổi gói A cho Nguyễn Xuân Hoàng Lộc và gói B cho Hồ Đức Mạnh** theo F02 trong DECISIONS; phạm vi công việc của từng gói và phân công C/D giữ nguyên. Kế hoạch triển khai, tên lớp/API và chi tiết hợp đồng bên dưới là đề xuất để nhóm thống nhất, không phải bằng chứng đã lập trình hoặc chạy test.
+Cập nhật: **2026-11-17**. **Người dùng đổi gói A cho Nguyễn Xuân Hoàng Lộc, B cho Hồ Đức Mạnh ngày2026-11-14** theo F02; phạm vi gói/C/D giữ nguyên. Luật bổ sung ngày2026-11-17 theo DECISIONS; kế hoạch/tên API cụ thể vẫn cần nhóm rà soát. Trạng thái code A/D và kết quả kiểm thử xem README, không dùng phân công này để tuyên bố mọi phần hoàn tất.
 
 Nguồn: [AGENTS](../AGENTS.md), [GAME_RULES](GAME_RULES.md), [DECISIONS](DECISIONS.md), [ARCHITECTURE](ARCHITECTURE.md), [DATA_MODEL](DATA_MODEL.md), [TEST_CASES](TEST_CASES.md) và [Word gốc](references/GAME_DESIGN_DOCUMENT.docx). Gameplay ưu tiên quyết định mới đã phê duyệt → Word cho phần không đổi → GAME_RULES → tài liệu kỹ thuật.
 
-Phạm vi: Unity6.6/6000.6.4f1, URP, C#, bàn3D low-poly/camera cố định, UI2D, tối đa4 người cùng máy hoặc AI. Không online, Save/Load trận, shop hoặc hệ thống ngoài đặc tả.
+Phạm vi: Unity6.6/6000.6.4f1, URP, C#, bàn3D low-poly/camera cố định, UI2D,2–4 người cùng máy/AI, được trùng nghề, người đầu ngẫu nhiên rồi thứ tự ghế cố định. Không online, Save/Load trận, shop hoặc hệ thống ngoài đặc tả.
 
 ## 1. Quyền sở hữu và nguyên tắc chung
 
@@ -31,6 +31,8 @@ Không cần đợi thành viên A hoàn thành toàn bộ Core rồi B/C/D mớ
 - Thuê, thuế, nghĩa vụ, Q06 một biện pháp chủ động, thanh lý/phá sản; không tạo hệ thanh toán riêng cho từng thẻ.
 - Đồng hồ, popup pause Human/AI, chuỗi sau hết giờ Q20; mốc cuối lượt Q09 và điều kiện thắng.
 - Tù3 lượt: đếm riêng, lượt bắt không tính, phí bắt buộc sau lần thử thất bại thứ3, thả cuối lượt không đi thêm.
+- P02 miễn phí tù bắt buộc bằng Lawyer Ultimate vẫn thả cuối lượt; thử tù Strategist có gieo lại, chỉ kết quả cuối quyết định. Q10 di chuyển thẻ/dịch vụ tiến và thưởng qua0, cho dùng dịch vụ lại nếu thẻ đưa về24.
+- Lễ hội tổ chức một TP toàn cục, mỗi200.000 cùng chủ/cùng TP thêm50% thuê gốc, không TTL2 lượt; thay/xóa theo Q14/Q15. Batch thẻ10 xử lý mọi người đủ tiền ngay và mọi người thiếu qua nghĩa vụ của mình, không chuyển lượt của người trả.
 - Unit test kinh tế, nghĩa vụ và vòng đời trận.
 
 ### Bàn giao và điều kiện chạy
@@ -41,7 +43,7 @@ Không cần đợi thành viên A hoàn thành toàn bộ Core rồi B/C/D mớ
 | Bộ điều phối, validator và hợp đồng action/result/event | Cùng lệnh Human/AI cho cùng kết quả; lệnh lỗi không trừ tiền/tiêu tài nguyên |
 | Bộ tính toán kinh tế và sổ vốn | Thuê/thuế/mua/nâng/cưỡng chế/bán/hoàn vốn đúng công thức và không mất đồng |
 | Lifecycle lượt/vòng/clock/tù/thắng | Q04/05/06/09/11/13/20, JAIL-03; callback không áp dụng hai lần |
-| Test domain và hướng dẫn tích hợp | Có lệnh chạy/test result thực tế khi triển khai; hiện mới là đặc tả |
+| Test domain và hướng dẫn tích hợp | Có kết quả chạy đúng mốc code, hướng dẫn gateway và giới hạn tích hợp; xem README, không coi mọi ca đặc tả đã PASS |
 
 Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương ứng trong TEST_CASES; C/D cung cấp fixture tác động thẻ/kỹ năng. Những ca PENDING chỉ kiểm tra phần đã rõ, không tự điền oracle.
 
@@ -116,6 +118,7 @@ Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương �
 
 - Cấu hình đủ Nhà Đầu Tư, Doanh Nhân, Kỹ Sư, Luật Sư, Banker, Nhà Chiến Lược; Passive/Active/Ultimate/Weakness.
 - Quy tắc cooldown, thời hạn theo lượt riêng và điều kiện mục tiêu; Q05 hết RentDouble trước lượt kế tiếp.
+- Q12 cho Active/Ultimate Kỹ Sư lên Hotel cùng lần đến; coupon chưa dùng chặn kích hoạt lại; Strategist được gieo lại thử tù. Q17 giữ effect khi nguồn phá sản, N lượt còn lại chuyển thành N vòng mới hoàn chỉnh sau vòng dở.
 - Định nghĩa modifier/intent giảm giá, thuê, nâng cấp, miễn nghĩa vụ, khoản vay, cưỡng chế từ xa, gieo lại/chọn ô.
 - Kiểm tra chỉ tiêu hao khi thành công; phối hợp A về Q06 một biện pháp/obligation, Q09 deadline/lãi và Q04 quyền gieo bị thay.
 - AI chọn mua/nâng/bán/cưỡng chế, dùng skill và mục tiêu; xử lý thẻ, thuế, nợ và tù3 lượt qua legal actions.
@@ -174,7 +177,7 @@ Core duy nhất commit; không để Cards/Skills viết trực tiếp các dict
 - GameState và DTO/state dùng chung: tiền/vốn, lượt/vòng, jailTurnsStarted, effect expiry, obligation và rootLandingId.
 - Command/action/result/gameplay event; trách nhiệm tính và quyền ghi; rejected action không tiêu hao.
 - Chủ sở hữu từng thư mục/script/Scene và cách bàn giao thay đổi.
-- Luật APPROVED, các Q/P còn mở; đặc biệt P01 đồng dư và P02 miễn phí tù mới.
+- Luật APPROVED, gồm bổ sung ngày2026-11-17: P01/P02, Setup, di chuyển, Hotel kỹ năng, lễ hội, coupon, orphan effect và batch quà. Q02 deck/shuffle/rút lại vẫn cần người dùng quyết định; không hỏi lại P01/P02 đã rõ.
 - Hợp đồng mock dùng chung và đường chạy test khi triển khai; không cài package tự động.
 
 ### Giai đoạn1 — Làm song song
@@ -194,7 +197,7 @@ Core duy nhất commit; không để Cards/Skills viết trực tiếp các dict
 
 ### Giai đoạn3 — Hoàn thiện
 
-- Chạy kịch bản2–4 người, AI/cùng máy; đây là kế hoạch test, không chốt số người tối thiểu chưa duyệt của Q03.
+- Chạy kịch bản2–4 người, AI/cùng máy, có cả trùng nghề; Q03 đã chốt phạm vi Setup, ngẫu nhiên người đầu và thứ tự ghế cố định.
 - Test mọi điều kiện thắng, phá sản, thẻ, kỹ năng và giao nhau giữa module.
 - Sửa lỗi tích hợp, visual/UI/hiệu năng, Inspector và build.
 - Chỉ báo đã chạy Unity/build/test khi thực sự có kết quả; không coi mock/demo đơn lẻ là game hoàn chỉnh.
@@ -221,4 +224,4 @@ Các mục DoD từng gói nằm ở §2–5. Cổng chung:
 5. Không triển khai trùng module, không mở rộng online/Save/Load/shop, không xóa asset để che lỗi.
 6. PR mô tả hành vi, cách kiểm chứng và nhánh PENDING còn chặn; đề xuất người review theo hợp đồng liên quan, không tự giả định ai đã duyệt.
 
-File này là phân công/kế hoạch; không tạo script, Scene, prefab hoặc asset và không bắt đầu lập trình trong lượt cập nhật tài liệu.
+File này là phân công/kế hoạch và cổng bàn giao, không phải báo cáo mọi gói đã hoàn tất. Hướng dẫn implementation A/D và giới hạn thực tế xem README; bên nhận B/C vẫn rà soát hợp đồng trước khi nối Scene/UI.
