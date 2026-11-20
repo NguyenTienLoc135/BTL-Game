@@ -1,0 +1,21 @@
+{
+  "name": "BtlGame.Presentation.Editor",
+  "rootNamespace": "BTLGame.EditorTools",
+  "references": [
+    "BtlGame.UI",
+    "BtlGame.Gameplay",
+    "UnityEngine.UI",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
