@@ -13,6 +13,7 @@ namespace BTLGame.EditorTools
         [MenuItem("Tools/CoTyPhu/Build All Screens")]
         public static void Run()
         {
+            BuildingPrefabBuilder.Build(); // prefab công trình trước, rồi mới dựng Scene dùng chúng
             GameplaySceneBuilder.Build();
             MainMenuSceneBuilder.Build(); // dựng sau cùng nên MainMenu là Scene đang mở
             Debug.Log("[BuildAllScreens] Đã dựng Gameplay + MainMenu.");

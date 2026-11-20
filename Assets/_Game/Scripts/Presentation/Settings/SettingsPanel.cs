@@ -4,8 +4,8 @@ using UnityEngine.UI;
 namespace BTLGame.Presentation
 {
     /// <summary>
-    /// Popup Cài đặt âm thanh: ba thanh trượt (chung / nhạc nền / hiệu ứng), công tắc bật âm thanh,
-    /// nút Khôi phục mặc định và nút Lưu. Chỉnh chỉ có tác dụng nghe thử; chỉ nút Lưu mới ghi vào
+    /// Popup Cài đặt âm thanh: ba thanh trượt (chung / nhạc nền / hiệu ứng), hai công tắc BẬT/TẮT độc lập
+    /// (nhạc nền, hiệu ứng), nút Khôi phục mặc định và nút Lưu. Chỉnh chỉ có tác dụng nghe thử; chỉ nút Lưu mới ghi vào
     /// <see cref="AudioSettingsStore"/>. Đóng popup mà không Lưu thì hoàn về giá trị đã lưu.
     /// Không đụng tới trạng thái trận. Gắn vào object gốc của popup (do SettingsPanelBuilder tạo, gán field).
     /// </summary>
@@ -17,15 +17,19 @@ namespace BTLGame.Presentation
         [SerializeField] private Text _masterValue;
         [SerializeField] private Text _musicValue;
         [SerializeField] private Text _sfxValue;
-        [SerializeField] private Toggle _soundToggle;
-        [SerializeField] private GameObject _switchOn;
-        [SerializeField] private GameObject _switchOff;
+        [SerializeField] private Toggle _musicToggle;
+        [SerializeField] private GameObject _musicSwitchOn;
+        [SerializeField] private GameObject _musicSwitchOff;
+        [SerializeField] private Toggle _sfxToggle;
+        [SerializeField] private GameObject _sfxSwitchOn;
+        [SerializeField] private GameObject _sfxSwitchOff;
         [SerializeField] private Button _resetButton;
         [SerializeField] private Button _saveButton;
+        [SerializeField] private GameObject _unsavedHint;
 
         // Giá trị đang chỉnh (chưa lưu).
         private float _master, _music, _sfx;
-        private bool _enabled;
+        private bool _musicOn, _sfxOn;
         private bool _bound;
 
         private void OnEnable()
@@ -41,7 +45,7 @@ namespace BTLGame.Presentation
 
         private void OnDisable()
         {
-            // Đóng mà chưa Lưu: bỏ phần nghe thử, trả AudioListener về giá trị đã lưu.
+            // Đóng mà chưa Lưu: bỏ phần nghe thử, trả về giá trị đã lưu.
             AudioSettingsStore.Apply();
         }
 
@@ -51,7 +55,8 @@ namespace BTLGame.Presentation
             if (_masterSlider != null) _masterSlider.onValueChanged.AddListener(v => { _master = v; OnEdited(); });
             if (_musicSlider != null) _musicSlider.onValueChanged.AddListener(v => { _music = v; OnEdited(); });
             if (_sfxSlider != null) _sfxSlider.onValueChanged.AddListener(v => { _sfx = v; OnEdited(); });
-            if (_soundToggle != null) _soundToggle.onValueChanged.AddListener(on => { _enabled = on; OnEdited(); });
+            if (_musicToggle != null) _musicToggle.onValueChanged.AddListener(on => { _musicOn = on; OnEdited(); });
+            if (_sfxToggle != null) _sfxToggle.onValueChanged.AddListener(on => { _sfxOn = on; OnEdited(); });
             if (_resetButton != null) _resetButton.onClick.AddListener(ResetToDefault);
             if (_saveButton != null) _saveButton.onClick.AddListener(Save);
         }
@@ -61,7 +66,8 @@ namespace BTLGame.Presentation
             _master = AudioSettingsStore.MasterVolume;
             _music = AudioSettingsStore.MusicVolume;
             _sfx = AudioSettingsStore.SfxVolume;
-            _enabled = AudioSettingsStore.SoundEnabled;
+            _musicOn = AudioSettingsStore.MusicOn;
+            _sfxOn = AudioSettingsStore.SfxOn;
         }
 
         private void ResetToDefault()
@@ -69,14 +75,15 @@ namespace BTLGame.Presentation
             _master = AudioSettingsStore.DefaultMaster;
             _music = AudioSettingsStore.DefaultMusic;
             _sfx = AudioSettingsStore.DefaultSfx;
-            _enabled = AudioSettingsStore.DefaultEnabled;
+            _musicOn = AudioSettingsStore.DefaultMusicOn;
+            _sfxOn = AudioSettingsStore.DefaultSfxOn;
             OnEdited();
             Refresh();
         }
 
         private void Save()
         {
-            AudioSettingsStore.Save(_master, _music, _sfx, _enabled);
+            AudioSettingsStore.Save(_master, _music, _sfx, _musicOn, _sfxOn);
             var popup = GetComponent<UiPopup>();
             if (popup != null)
             {
@@ -86,7 +93,7 @@ namespace BTLGame.Presentation
 
         private void OnEdited()
         {
-            AudioSettingsStore.Preview(_master, _enabled);
+            AudioSettingsStore.Preview(_master, _music, _sfx, _musicOn, _sfxOn);
             UpdateLabels();
         }
 
@@ -96,23 +103,32 @@ namespace BTLGame.Presentation
             if (_masterSlider != null) _masterSlider.SetValueWithoutNotify(_master);
             if (_musicSlider != null) _musicSlider.SetValueWithoutNotify(_music);
             if (_sfxSlider != null) _sfxSlider.SetValueWithoutNotify(_sfx);
-            if (_soundToggle != null) _soundToggle.SetIsOnWithoutNotify(_enabled);
+            if (_musicToggle != null) _musicToggle.SetIsOnWithoutNotify(_musicOn);
+            if (_sfxToggle != null) _sfxToggle.SetIsOnWithoutNotify(_sfxOn);
             UpdateLabels();
         }
 
         private void UpdateLabels()
         {
+            // Nhắc rõ khi đang nghe thử mà chưa Lưu: đóng popup sẽ hoàn về giá trị đã lưu.
+            if (_unsavedHint != null) _unsavedHint.SetActive(AudioSettingsStore.DiffersFromSaved(_master, _music, _sfx, _musicOn, _sfxOn));
+
             SetPercent(_masterValue, _master);
             SetPercent(_musicValue, _music);
             SetPercent(_sfxValue, _sfx);
 
-            if (_switchOn != null) _switchOn.SetActive(_enabled);
-            if (_switchOff != null) _switchOff.SetActive(!_enabled);
+            SetSwitch(_musicSwitchOn, _musicSwitchOff, _musicOn);
+            SetSwitch(_sfxSwitchOn, _sfxSwitchOff, _sfxOn);
 
-            // Khi tắt âm thanh, thanh trượt vẫn chỉnh được nhưng làm mờ để người chơi thấy đang tắt.
-            SetDim(_masterSlider, _enabled);
-            SetDim(_musicSlider, _enabled);
-            SetDim(_sfxSlider, _enabled);
+            // Thanh trượt của nhóm đang tắt vẫn chỉnh được nhưng làm mờ để người chơi thấy đang tắt.
+            SetDim(_musicSlider, _musicOn);
+            SetDim(_sfxSlider, _sfxOn);
+        }
+
+        private static void SetSwitch(GameObject on, GameObject off, bool value)
+        {
+            if (on != null) on.SetActive(value);
+            if (off != null) off.SetActive(!value);
         }
 
         private static void SetPercent(Text label, float value)

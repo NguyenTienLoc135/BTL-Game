@@ -23,6 +23,11 @@ namespace BTLGame.Presentation
         public event Action<DecisionSubmission> DecisionRequested;
         public event Action<EventCardIntent> CardIntentRequested;
 
+        // Sự kiện cho lớp hiệu ứng âm thanh (GameplaySfx); không ảnh hưởng luật.
+        public event Action RollClicked;
+        public event Action<DecisionPrompt> DecisionShown;
+        public event Action<GameHUDSnapshot> SnapshotRendered;
+
         private GameHUDSnapshot _last;
 
         private void OnEnable()
@@ -57,6 +62,7 @@ namespace BTLGame.Presentation
         {
             _last = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
             if (_hud != null) _hud.Apply(snapshot);
+            SnapshotRendered?.Invoke(snapshot);
         }
 
         public void SetRollLabel(string label)
@@ -68,6 +74,7 @@ namespace BTLGame.Presentation
         {
             if (_decision == null) throw new InvalidOperationException("DecisionPopupView chưa được gán.");
             _decision.Show(prompt);
+            DecisionShown?.Invoke(prompt);
         }
 
         public void ShowCard(EventCardId id, DecisionPrompt prompt)
@@ -84,6 +91,7 @@ namespace BTLGame.Presentation
             }
 
             _decision.Show(prompt);
+            DecisionShown?.Invoke(prompt);
         }
 
         public bool CompleteDecision(long decisionId)
@@ -93,7 +101,11 @@ namespace BTLGame.Presentation
 
         // ---------------------------------------------------------------- ý định từ HUD
 
-        private void OnRoll() => Request(GameplayUiActionKind.Roll);
+        private void OnRoll()
+        {
+            RollClicked?.Invoke();
+            Request(GameplayUiActionKind.Roll);
+        }
         private void OnSkill() => Request(GameplayUiActionKind.UseActiveSkill);
         private void OnSell() => Request(GameplayUiActionKind.OpenSellSelection);
 

@@ -90,6 +90,10 @@ namespace BTLGame.EditorTools
         /// <summary>Tờ giấy kẹp bút (ô Thuế), màu pastel, in phẳng lên mặt ô.</summary>
         internal static Sprite TaxPaper => GeneratedColor("tax_paper", TaxPaperColor);
 
+        /// <summary>Tia sáng 4 cánh (hiệu ứng chúc mừng).</summary>
+        internal static Sprite IconSparkle => Generated("icon_sparkle", SparkleAlpha);
+        internal static Sprite IconBurst => Generated("icon_burst", BurstAlpha);
+
         private const int GenSize = 128;
 
         private static Sprite Generated(string name, System.Func<float, float, float> alpha)
@@ -297,6 +301,21 @@ namespace BTLGame.EditorTools
             return new Color(Mathf.Lerp(c.r, 1f, Mathf.Clamp01(white)), Mathf.Lerp(c.g, 1f, Mathf.Clamp01(white)), Mathf.Lerp(c.b, 1f, Mathf.Clamp01(white)), disc);
         }
 
+        private static float SparkleAlpha(float x, float y)
+        {
+            float f = Mathf.Sqrt(Mathf.Abs(x)) + Mathf.Sqrt(Mathf.Abs(y)); // đường astroid: 4 cánh nhọn
+            return Edge((f - 1.0f) * 0.3f);
+        }
+
+        /// <summary>Huy hiệu nổ 12 cánh (vòng sao quanh tổng xúc xắc).</summary>
+        private static float BurstAlpha(float x, float y)
+        {
+            float r = Mathf.Sqrt(x * x + y * y);
+            float angle = Mathf.Atan2(y, x);
+            float boundary = 0.8f + 0.17f * Mathf.Cos(12f * angle);
+            return Edge((r - boundary) * 2f);
+        }
+
         /// <summary>Biểu tượng nguồn/thoát: vòng hở phía trên + thanh dọc.</summary>
         private static float PowerAlpha(float x, float y)
         {
@@ -425,7 +444,7 @@ namespace BTLGame.EditorTools
         /// <summary>Nút phụ (xanh navy, chữ trắng) — kiểu nút mặc định của mọi menu/popup.</summary>
         internal static Button SecondaryButton(Transform parent, string name, string label, Vector2 pos, Vector2 size, int fontSize, Sprite icon = null)
         {
-            return BaseButton(parent, name, BtnBlue, Navy, icon, label, pos, size, fontSize, Bold, Color.white, TextOutline, 2.5f);
+            return BaseButton(parent, name, BtnBlue, Navy, icon, label, pos, size, fontSize, Bold, Color.white, Color.clear, 0f); // chữ trắng trên navy: không viền → nét sắc
         }
 
         /// <summary>Nút vuông nhỏ chỉ có icon (góc phải trên, cột nút bên phải trong trận).</summary>
@@ -535,7 +554,7 @@ namespace BTLGame.EditorTools
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 24;
             t.resizeTextMaxSize = 52;
-            AddOutline(t.gameObject, new Color(0.12f, 0.12f, 0.4f, 0.9f), 3f);
+            AddOutline(t.gameObject, new Color(0.12f, 0.12f, 0.4f, 0.9f), 2f);
 
             Button close = null;
             if (dismissible)

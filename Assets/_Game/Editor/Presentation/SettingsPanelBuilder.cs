@@ -30,8 +30,10 @@ namespace BTLGame.EditorTools
             var master = Row(inner, "Âm lượng chung", 210f, trackGrey, trackColor, handle, out var masterValue);
             var music = Row(inner, "Nhạc nền", 90f, trackGrey, trackColor, handle, out var musicValue);
             var sfx = Row(inner, "Hiệu ứng âm thanh", -30f, trackGrey, trackColor, handle, out var sfxValue);
-            NewText("Label_Enabled", inner, "Bật âm thanh", Bold, 34, TextDark, TextAnchor.MiddleLeft, new Vector2(-240f, -150f), new Vector2(420f, 70f));
-            var toggle = NewSwitch(inner, new Vector2(370f, -150f), out var switchOn, out var switchOff);
+            NewText("Label_Music", inner, "Bật nhạc", Bold, 34, TextDark, TextAnchor.MiddleLeft, new Vector2(-390f, -150f), new Vector2(200f, 70f));
+            var musicToggle = NewSwitch(inner, new Vector2(-190f, -150f), out var musicOn, out var musicOff);
+            NewText("Label_Sfx", inner, "Bật hiệu ứng", Bold, 34, TextDark, TextAnchor.MiddleLeft, new Vector2(45f, -150f), new Vector2(260f, 70f));
+            var sfxToggle = NewSwitch(inner, new Vector2(285f, -150f), out var sfxOn, out var sfxOff);
 
             foreach (float y in new[] { 150f, 30f, -90f })
             {
@@ -42,6 +44,10 @@ namespace BTLGame.EditorTools
             var reset = SecondaryButton(inner, "Btn_Reset", "Khôi phục mặc định", new Vector2(-230f, -250f), new Vector2(420f, 84f), 28);
             var save = PrimaryButton(inner, "Btn_Save", "Lưu", new Vector2(230f, -250f), new Vector2(360f, 90f), 38);
 
+            // Nhắc khi đang nghe thử mà chưa Lưu (đóng popup sẽ hoàn về giá trị đã lưu).
+            var unsaved = NewText("Hint_Unsaved", inner, "● Chưa lưu", Bold, 22, new Color(0.8f, 0.4f, 0.05f), TextAnchor.MiddleCenter, new Vector2(440f, -150f), new Vector2(130f, 40f));
+            unsaved.gameObject.SetActive(false);
+
             var panel = parts.Root.AddComponent<SettingsPanel>();
             var so = new SerializedObject(panel);
             so.FindProperty("_masterSlider").objectReferenceValue = master;
@@ -50,11 +56,15 @@ namespace BTLGame.EditorTools
             so.FindProperty("_masterValue").objectReferenceValue = masterValue;
             so.FindProperty("_musicValue").objectReferenceValue = musicValue;
             so.FindProperty("_sfxValue").objectReferenceValue = sfxValue;
-            so.FindProperty("_soundToggle").objectReferenceValue = toggle;
-            so.FindProperty("_switchOn").objectReferenceValue = switchOn;
-            so.FindProperty("_switchOff").objectReferenceValue = switchOff;
+            so.FindProperty("_musicToggle").objectReferenceValue = musicToggle;
+            so.FindProperty("_musicSwitchOn").objectReferenceValue = musicOn;
+            so.FindProperty("_musicSwitchOff").objectReferenceValue = musicOff;
+            so.FindProperty("_sfxToggle").objectReferenceValue = sfxToggle;
+            so.FindProperty("_sfxSwitchOn").objectReferenceValue = sfxOn;
+            so.FindProperty("_sfxSwitchOff").objectReferenceValue = sfxOff;
             so.FindProperty("_resetButton").objectReferenceValue = reset;
             so.FindProperty("_saveButton").objectReferenceValue = save;
+            so.FindProperty("_unsavedHint").objectReferenceValue = unsaved.gameObject;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             return parts.Popup;
