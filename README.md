@@ -8,12 +8,14 @@
 2. Trong Unity Hub, thêm project hiện có bằng thư mục gốc `BTL-Game` và mở đúng phiên bản Editor trong `ProjectSettings/ProjectVersion.txt`.
 3. Đọc `AGENTS.md`, luật và phân công trước khi sửa module. Không sửa Scene/Prefab của người khác khi chưa thống nhất.
 4. Làm trên nhánh cá nhân; tích hợp bằng Pull Request vào `develop`. Phiên bản đã kiểm thử mới được đưa từ `develop` sang `main`; không force push.
+5. Cách chạy, dựng lại Scene, build và chạy test: xem [HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md). Luôn pull `develop` mới nhất trước khi làm tiếp.
 
 ## Tài liệu cần giữ
 
 | Tài liệu | Mục đích |
 |---|---|
 | [AGENTS.md](AGENTS.md) | Hướng dẫn coding agent, ranh giới module, kiểm thử và an toàn Git |
+| [HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) | Cách lấy code, mở project, chạy game, dựng Scene, build, chạy test, lỗi thường gặp |
 | [GAME_RULES.md](docs/GAME_RULES.md) | Luật gameplay dùng khi lập trình và review |
 | [DECISIONS.md](docs/DECISIONS.md) | Quyết định đã duyệt, khác biệt với Word và câu hỏi còn PENDING |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Kiến trúc đề xuất, quyền ghi trạng thái và luồng điều phối |
@@ -90,11 +92,11 @@ Kết quả chạy mới nhất nằm trong `Logs/AD-Push-EditMode-results.xml` 
 ## Tích hợp A/B/C/D ngày2026-11-19
 
 - Nguồn: A/D đã vào `origin/develop` qua PR15; B/C nằm trên `origin/test-B+C` tại `aa714b2`, bao gồm nhánh `feature/event-popup`. PR17 đưa develop vào nhánh thử B/C, không đưa B/C vào develop. Nhánh `dev-locnxh` là implementation A cũ dùng bộ Contracts khác, không chép đè lên A/D hiện tại.
-- Mở `Assets/_Game/Scenes/MainMenu.unity`, nhấn Play. Chọn chế độ, số người2–4, thời gian và nghề cho từng người rồi **TẠO TRẬN**. Chế độ AI: ghế đầu là Human, các ghế còn lại là AI; cùng máy: tất cả là Human. Người đi đầu vẫn ngẫu nhiên theo Core.
+- Mở `Assets/_Game/Scenes/MainMenu.unity`, nhấn Play: **Bắt đầu chơi** → **Chơi với Bot** hoặc **Chơi với người** → màn thiết lập (số người 2–4, thời gian, nghề từng người) → **Bắt đầu trận**. Chế độ Bot: ghế đầu là Human ("Bạn"), các ghế còn lại là Bot; Chơi với người: tất cả là Human. Người đi đầu vẫn ngẫu nhiên theo Core. Giao diện mới do builder Editor dựng (xem HUONG_DAN_CHAY.md); menu gọi `UnityMatchHost.QueueMatch`, host nói chuyện với giao diện qua `IGameplayUi`.
 - **TUNG XÚC XẮC** mở kết quả để chấp nhận/gieo lại hợp lệ; sau xử lý ô, nút này đổi thành **KẾT THÚC LƯỢT** nếu không còn quyền gieo. **KỸ NĂNG** gồm Active và Ultimate hợp lệ; **TÀI SẢN** mở bán tự nguyện. Popup xử lý mua/nâng/thuê/thuế/tù/thẻ/thanh lý. Danh sách mục tiêu dài có thể cuộn bằng chuột.
 - `UnityMatchHost` nằm trên một GameObject riêng trong mỗi Scene. Nó tạo đúng một MatchCoordinator khi vào Gameplay, nối UI với legal commands, AI với cùng gateway, BoardView với callback actionId/landingId. Play thẳng Gameplay quay về MainMenu để cấu hình, không tự chọn roster.
 - Q02 được người dùng duyệt: mỗi lần rút ngẫu nhiên đều14 loại, có hoàn lại; thẻ giữ trùng bỏ lá mới, preview Strategist không bốc lại. `RandomEventCardProvider` trả ý định, Core là nơi duy nhất ghi state/tiền/thẻ/effect.
-- Unity menu **BTL Game → Connect Team Gameplay** cập nhật binding, hướng dẫn Xuất phát200.000 và lễ hội đã duyệt mà không dựng lại visual. **Build Integrated Windows Player** xuất `Builds/TeamIntegration/BTLGame.exe` (Git bỏ qua). Không cần gán Inspector thủ công thêm sau khi nhận đủ Scene/script/meta của bản tích hợp.
+- Scene `MainMenu`/`Gameplay` được dựng bằng menu **Tools ▸ CoTyPhu ▸ Build All Screens** (không sửa Scene bằng tay). Menu cũ **BTL Game → Connect Team Gameplay** và `PackageBuilder` là công cụ của bản giao diện cũ; chạy lại sẽ ghi đè Scene hiện tại. Build thử Windows: **Tools ▸ CoTyPhu ▸ Build Playtest (Windows)** xuất `Builds/Playtest/CoTyPhuRPG.exe` (Git bỏ qua).
 - Font UI tạo từ TTF Be Vietnam Pro hiện có tại `Assets/_Game/Art/Fonts/BeVietnamPro-UI SDF.asset`, SDF padding8; giữ nguyên font và model nguồn. Board bind màu/nhãn khi chạy, camera nhìn chéo cố định; prefab quân/công trình được chỉnh kích thước để nhìn thấy trên ô, không đổi mesh nguồn hoặc vị trí gameplay.
 - Kiểm chứng tự động cuối ngày2026-11-19: assembly `BtlGame.Core.Tests` **239/239 đạt**, gồm6 trận AI dùng provider sản phẩm và smoke Play Mode MainMenu→Gameplay→animation→callback, font tiếng Việt và màu ô runtime. Log tại `Logs/TeamIntegration-Tests-Final.xml`/`.log`; build Windows thành công ở `Logs/TeamIntegration-Build-Final.log`.
 - Đã mở Windows player, kiểm tra bằng chuột: setup có trùng nghề→tạo trận→gieo/chốt xúc xắc→animation→popup mua; Nhà Đầu Tư mua biển100.000 với Passive10%, tiền300.000→210.000. Đã quan sát font, màu32 ô và quân sau sửa. Đây chưa thay kiểm thử thủ công toàn bộ14 thẻ/6 nghề, bố cục nhiều độ phân giải, âm thanh/VFX hoặc mọi tiêu chí đồ án.
