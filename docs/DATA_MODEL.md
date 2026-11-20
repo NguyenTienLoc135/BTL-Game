@@ -177,7 +177,7 @@ CardId đề xuất ánh xạ STT GAME_RULES §8, không phải số lượng b�
 | 13 | Cúp điện | Không |
 | 14 | Tặng quà 200.000 | Không |
 
-CardDefinition chứa mô tả, loại giữ, điều kiện mục tiêu và thông số theo luật. Không tự coi 14 loại là bộ bài chỉ có 14 lá, xác suất bằng nhau hoặc bỏ vào đáy sau rút (Q02).
+CardDefinition chứa mô tả, loại giữ, điều kiện mục tiêu và thông số theo luật. Q02 được người dùng duyệt ngày2026-11-19: mỗi lần rút ngẫu nhiên đều14 loại, có hoàn lại; không phải bộ14 lá hữu hạn. Seed và CardDrawOrdinal là chi tiết kỹ thuật để tái lập đúng preview, không tiến ordinal khi query.
 
 HeldCards là set CardId thuộc {3,4,5,8}. Rút trùng loại đang giữ → bỏ thẻ mới. Bảo vệ tự dùng chỉ khi tác động hợp lệ; Miễn thuế/Giảm thuê do người chơi quyết định. CardDrawState phải cho Strategist nhìn đúng lá kế tiếp, không tạo RNG lần hai khi preview.
 
@@ -260,7 +260,7 @@ Giá trị số của enum mới chưa được nhóm chốt, ngoại trừ Tile
 - BoardCatalog: vị trí/loại/tên/quốc gia/mã hiển thị và các giá tham chiếu của bảng.
 - PropertyRulesCatalog: tỷ lệ cấp, thuê, phí, tỷ lệ hoàn vốn; không lặp giá từng TP.
 - RoleCatalog/SkillCatalog: ID, mô tả, cooldown và thông số sáu nghề; một bộ dữ liệu chuẩn.
-- CardCatalog: 14 định nghĩa thẻ; không chứa pile runtime hoặc chính sách rút chưa chốt.
+- CardCatalog: 14 định nghĩa thẻ; không chứa runtime thẻ giữ. Q02 đã chốt rút đều có hoàn lại; provider giữ preview nhất quán theo ordinal do Core sở hữu.
 - Tham chiếu Sprite/AudioClip nếu cần chỉ nằm ở SO/presentation; plain C# runtime dùng ID/catalog đã chuyển đổi, không phụ thuộc UnityEngine.Object.
 
 Kiểm tra dữ liệu trước khi tạo trận: 32 ô khác ID; đúng 20 City + 4 Beach + 8 chức năng; đủ 8 nhóm quốc gia; giá theo bảng; 6 role; 14 card; 4 loại giữ; không TP17 giả; đủ quan hệ ID. Kiểm tra runtime: chủ hợp lệ, cấp/vốn đúng loại, effect có source/target hợp lệ, ba festival khác nhau, không state mutable trong SO.

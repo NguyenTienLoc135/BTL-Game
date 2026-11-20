@@ -2,7 +2,10 @@
   "name": "BtlGame.Core.Tests",
   "rootNamespace": "BtlGame.Tests",
   "references": [
-    "BtlGame.Gameplay"
+    "BtlGame.Gameplay",
+    "BtlGame.Presentation",
+    "Unity.ugui",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"

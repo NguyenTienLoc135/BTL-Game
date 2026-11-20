@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 486f1a1aad4d6294da8a25e373cc77a3, type: 3}
+  m_Name: EventCard_12
+  m_EditorClassIdentifier: Assembly-CSharp::BTLGame.Cards.EventCardData
+  _id: 12
+  _title: "T\u1ED5 ch\u1EE9c l\u1EC5 h\u1ED9i"
+  _description: "C\xF3 th\u1EC3 tr\u1EA3 200.000\u0111 ch\u1ECDn th\xE0nh ph\u1ED1 c\u1EE7a m\xECnh. C\xF9ng ch\u1EE7/c\xF9ng th\xE0nh ph\u1ED1 c\u1ED9ng th\xEAm 50% thu\xEA g\u1ED1c m\u1ED7i l\u1EA7n, kh\xF4ng h\u1EBFt h\u1EA1n theo l\u01B0\u1EE3t. Ch\u1ECDn th\xE0nh ph\u1ED1 kh\xE1c thay l\u1EC5 h\u1ED9i c\u0169 b\u1EB1ng m\u1EE9c +50%; \u0111\u1ED5i ch\u1EE7 th\xEC x\xF3a."
+  _actionKind: 11
+  _canBeHeld: 0

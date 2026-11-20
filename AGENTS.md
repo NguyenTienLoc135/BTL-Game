@@ -15,6 +15,8 @@
 
 ## 1. DỰ ÁN VÀ PHẠM VI CỐ ĐỊNH
 
+- **Q02 được người dùng duyệt ngày2026-11-19:** mỗi lần rút chọn ngẫu nhiên đều14 loại, có hoàn lại (có thể lặp ngay); thẻ giữ trùng bỏ lá mới. Preview Strategist giữ đúng lá của lần rút kế tiếp, không bốc lại khi query. Không tiếp tục coi Q02 là PENDING.
+
 - Unity **6.6 — 6000.6.4f1**, C#, **Universal Render Pipeline (URP)**, PC/Windows là môi trường chính. Kiểm tra `ProjectSettings/ProjectVersion.txt` trước khi thay đổi điều kiện tương thích. Không tự chuyển sang Built-in/HDRP.
 - Board game chiến thuật theo lượt, **bàn cờ 3D Low Poly**, camera nhìn chéo **cố định**, **UI 2D điều khiển bằng chuột/nút**.
 - **2–4 người**, được trùng nghề; người đầu được chọn ngẫu nhiên, sau đó theo thứ tự ghế cố định. AI và/hoặc nhiều người lần lượt trên **cùng một thiết bị**. **KHÔNG** multiplayer online, lobby/networking, tài khoản, cloud, save/load giữa trận.

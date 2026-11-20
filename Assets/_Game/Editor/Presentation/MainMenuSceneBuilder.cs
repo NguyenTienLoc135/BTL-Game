@@ -1,5 +1,5 @@
 #if UNITY_EDITOR
-using BTLGame.UI;
+using BTLGame.Presentation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -23,13 +23,7 @@ namespace BTLGame.EditorTools
         public static void Build()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            foreach (var go in scene.GetRootGameObjects())
-            {
-                if (go.name == RootName)
-                {
-                    Object.DestroyImmediate(go);
-                }
-            }
+            SceneKit.ResetScene(scene);
 
             var root = new GameObject(RootName);
             SetupCameraAndLight();

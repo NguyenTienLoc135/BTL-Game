@@ -106,7 +106,7 @@ Test chính: L01–L44, L46–L68 và các ca D04/D09/D11/D13/D20, F/J tương �
 
 **Cần nhận:** A cung cấp snapshot, quote, legal options, SubmitDecision/Action và result/event; D cung cấp mô tả nghề/skill, cooldown và thông tin được phép xem; B tích hợp prefab vào Gameplay.
 
-**Làm ngay bằng mock:** wireframe, popup prefabs, MainMenu, mô tả thẻ và fixture. Cơ chế shuffle/rút lại còn Q02 PENDING; không lấy deck giả lập làm luật sản phẩm.
+**Làm ngay bằng mock:** wireframe, popup prefabs, MainMenu, mô tả thẻ và fixture. Q02 đã chốt ngày2026-11-19: ngẫu nhiên đều14 loại mỗi lần, có hoàn lại; preview không bốc lại. Không lấy deck giả lập làm luật sản phẩm.
 
 **Không triển khai trùng:** UI/Cards không trực tiếp sửa tiền, chủ hoặc tự tạo hệ thanh toán/thanh lý; không tự tính giá khác Core. Không sửa Gameplay khi B đang sở hữu; gửi prefab/yêu cầu binding hoặc nhận bàn giao rõ ràng trước.
 
@@ -177,7 +177,7 @@ Core duy nhất commit; không để Cards/Skills viết trực tiếp các dict
 - GameState và DTO/state dùng chung: tiền/vốn, lượt/vòng, jailTurnsStarted, effect expiry, obligation và rootLandingId.
 - Command/action/result/gameplay event; trách nhiệm tính và quyền ghi; rejected action không tiêu hao.
 - Chủ sở hữu từng thư mục/script/Scene và cách bàn giao thay đổi.
-- Luật APPROVED, gồm bổ sung ngày2026-11-17: P01/P02, Setup, di chuyển, Hotel kỹ năng, lễ hội, coupon, orphan effect và batch quà. Q02 deck/shuffle/rút lại vẫn cần người dùng quyết định; không hỏi lại P01/P02 đã rõ.
+- Luật APPROVED, gồm bổ sung ngày2026-11-17: P01/P02, Setup, di chuyển, Hotel kỹ năng, lễ hội, coupon, orphan effect và batch quà. Q02 được duyệt bổ sung ngày2026-11-19 (ngẫu nhiên đều14 loại, có hoàn lại); không hỏi lại P01/P02 đã rõ.
 - Hợp đồng mock dùng chung và đường chạy test khi triển khai; không cài package tự động.
 
 ### Giai đoạn1 — Làm song song

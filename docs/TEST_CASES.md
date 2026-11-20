@@ -4,13 +4,13 @@ Ngày cập nhật: **2026-11-17**. **Đây là đặc tả, không tự đánh 
 
 ## 1. Cách đọc và fixture
 
-- ID L/S/C/D/F/J giữ để truy vết, không suy ra trạng thái từ tiền tố D. §9e bổ sung oracle ngày2026-11-17; chỉ Q02 thiếu chính sách deck. Có test code cho nhiều hành vi nhưng chưa ánh xạ mọi dòng này sang kết quả chạy.
+- ID L/S/C/D/F/J giữ để truy vết, không suy ra trạng thái từ tiền tố D. §9e bổ sung oracle ngày2026-11-17; Q02 đã chốt bổ sung ngày2026-11-19 (rút đều14 loại có hoàn lại). Có test code cho nhiều hành vi nhưng chưa ánh xạ mọi dòng này sang kết quả chạy.
 - A/B/C/D là PlayerId fixture; Setup đã chốt2–4 người, được trùng nghề, người đầu ngẫu nhiên rồi thứ tự ghế cố định Q03.
 - Nếu test không nói khác: A là Nhà Chiến Lược, B là Banker, còn hoạt động; không có hiệu ứng/thẻ/độc quyền; TP đang xét không thuộc ba festival cố định; không kết thúc vòng chung trong hành động đó. Mỗi test khởi tạo riêng, không nối trạng thái từ dòng trước.
 - Không bỏ Passive/Weakness. Fixture mặc định dùng nghề khác nhau để dễ nhận diện, không cấm sản phẩm trùng nghề. Strategist/Banker dùng ở test kinh tế vì không sửa giá/thuê ngay thời điểm đó.
 - Vốn [Cọc, Nhà1, Nhà2, Nhà3, Hotel] tính bằng đồng. Giá niêm yết tách vốn thực; người trả và nhận ghi tiền trước/sau khi cần.
 - RNG dùng kết quả được cấp trước trong fixture; đây là cách kiểm thử, không chốt thuật toán random/deck của game.
-- Chữ “từ chối” nghĩa là không đổi tiền/chủ/cấp/thẻ/skill nếu hành động chưa thực hiện hợp lệ. “Không hiệu lực” của thẻ không tự quyết định thẻ đi đâu trong deck (Q02).
+- Chữ “từ chối” nghĩa là không đổi tiền/chủ/cấp/thẻ/skill nếu hành động chưa thực hiện hợp lệ. “Không hiệu lực” của thẻ không làm thay đổi xác suất lần rút kế tiếp theo Q02 đã duyệt.
 - Chỉ những test trong §10 có trạng thái **PENDING/BỊ CHẶN** mới chờ quyết định; không suy ra trạng thái từ tiền tố ID. Không tự đóng các Q/P chưa duyệt; trước khi hỏi phải tách phần Word đã quy định.
 
 ## 2. Bàn cờ, lượt, xúc xắc, xuất phát
@@ -258,13 +258,13 @@ Giữ ID gốc để truy vết. Các dòng này không còn bị chặn bởi c
 | D21 / P01 APPROVED |103 đồng phân vốn theo40:20:20:20, ba phần lẻ0,6 bằng nhau | Chia hai đồng dư theo bậc thấp trước | [41,21,21,20,0], tổng103; không mất đồng, ưu tiên Nhà1 rồi Nhà2 trong nhóm đang hòa |
 | D22 / P02 APPROVED | A Lawyer Ultimate có hiệu lực, cash300.000, lượt tù3 chốt không đôi | Giải quyết phí bắt buộc200.000 | Miễn phí, cash300.000; thả cuối lượt tại8, không di chuyển/gieo thêm. Lượt riêng kế tiếp mới đi; nợ Banker vẫn không miễn |
 
-## 10. Test PENDING còn bị chặn
+## 10. Q02 được duyệt bổ sung ngày2026-11-19
 
-Chỉ phần Q02 chưa có quyết định sản phẩm; không dùng fixture thẻ xác định làm oracle phân phối hoặc shuffle. Các Q/P đã được duyệt chuyển sang §9a/§9e.
+Người dùng đã duyệt ngẫu nhiên đều14 loại mỗi lần, có hoàn lại. Không còn chờ chính sách deck Q02; fixture xác định không dùng làm bằng chứng thống kê xác suất.
 
-| ID / nguồn | Trạng thái đầu vào | Hành động cần test | Kết quả còn phải xác nhận |
+| ID / nguồn | Trạng thái đầu vào | Hành động cần test | Kết quả mong đợi |
 |---|---|---|---|
-| D02 / Q02 | Trình tự thẻ hết, một số thẻ đang được giữ | Rút tiếp và xem trước | Phân phối/số bản sao, shuffle/tái tạo, lá bỏ/rút trùng đi đâu và preview khi tái tạo; chưa có oracle |
+| D02 / Q02 APPROVED | Một số thẻ đang được giữ; Strategist xem trước lá kế tiếp | Query nhiều lần rồi rút; rút lại loại đang giữ | Query giữ nguyên lá/ordinal; rút đúng lá đã xem. Mỗi lần tiếp theo độc lập chọn đều14 loại, cho phép lặp ngay, không có hết bộ. Thẻ giữ trùng bỏ lá mới, không mất lá cũ |
 
 Q01 giữ truy vết tài liệu, không tạo test gameplay; Word hiện có. Q07/Q08/Q18 đã có phạm vi oracle cụ thể ở §9d, không hỏi lại luật đã rõ.
 
@@ -272,5 +272,5 @@ Q01 giữ truy vết tài liệu, không tạo test gameplay; Word hiện có. Q
 
 1. Tách test công thức/validator/chuyển trạng thái plain C# khỏi presentation Unity; dùng framework hiện có, không tự cài thêm package.
 2. Dùng RNG/thẻ cấp trước, kiểm tra tiền hai phía, vốn từng bậc, tài nguyên, actor/pha, batch và callback một lần.
-3. Dùng oracle cập nhật theo DECISIONS; chỉ chặn nhánh thật sự còn thiếu Q02. Không thay expected result để làm code xanh hoặc phê duyệt ngầm API kỹ thuật.
+3. Dùng oracle cập nhật theo DECISIONS; không mở lại Q02 đã duyệt; chỉ chặn nhánh thực sự thiếu đặc tả. Không thay expected result để làm code xanh hoặc phê duyệt ngầm API kỹ thuật.
 4. Báo riêng kết quả tự động, Unity Editor, kiểm thử trực quan và build. README lưu mốc test đã chạy; danh sách đặc tả này không tự chuyển mọi dòng sang PASS.
