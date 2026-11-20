@@ -124,6 +124,10 @@ namespace BtlGame.Tests
             yield return new EnterPlayMode();
             yield return null;
 
+            var menuMusic = Object.FindFirstObjectByType<BTLGame.Presentation.MusicPlayer>();
+            Assert.That(menuMusic, Is.Not.Null, "MainMenu phải có nhạc nền.");
+            Assert.That(menuMusic.ClipCount, Is.EqualTo(UnityEditor.AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/_Game/Audio/Music/Menu" }).Length), "Nhạc menu = mọi clip trong Audio/Music/Menu (0 clip = im lặng có chủ ý).");
+
             FindActiveButton("Btn_HowTo").onClick.Invoke();
             var howTo = Object.FindObjectsByType<BTLGame.Presentation.UiPopup>(FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .First(p => p.name == "Popup_HowTo");
@@ -143,6 +147,11 @@ namespace BtlGame.Tests
             var host = Object.FindFirstObjectByType<UnityMatchHost>();
             Assert.That(host, Is.Not.Null);
             Assert.That(host.Match, Is.Not.Null);
+            var gameMusic = Object.FindFirstObjectByType<BTLGame.Presentation.MusicPlayer>();
+            Assert.That(Object.FindObjectsByType<BTLGame.Presentation.MusicPlayer>().Length, Is.EqualTo(1), "Chỉ được có MỘT bộ phát nhạc nền (không chồng nhạc khi chuyển Scene).");
+            Assert.That(gameMusic.ClipCount, Is.EqualTo(UnityEditor.AssetDatabase.FindAssets("t:AudioClip", new[] { "Assets/_Game/Audio/Music/Gameplay" }).Length), "Nhạc Gameplay = mọi clip trong Audio/Music/Gameplay.");
+            var sfx = Object.FindFirstObjectByType<BTLGame.Presentation.GameplaySfx>();
+            Assert.That(sfx != null && sfx.IsWired, Is.True, "Hiệu ứng âm thanh trong trận (xúc xắc, bước đi...) phải được nối.");
             var players = host.Match.QuerySnapshot().Players;
             Assert.That(players.Count, Is.EqualTo(2));
             Assert.That(players.All(p => p.Controller == ControllerKind.Human && p.Cash == 300000 && p.Position == 0), Is.True);
@@ -158,9 +167,13 @@ namespace BtlGame.Tests
             Assert.That(roll.interactable, Is.True);
             roll.onClick.Invoke();
             yield return null;
-            Button confirm = Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .First(b => b.name.StartsWith("OptionButton_") && b.gameObject.activeInHierarchy && b.interactable);
-            confirm.onClick.Invoke();
+            // Yêu cầu mới: sau khi tung chỉ chiếu hoạt ảnh xúc xắc, KHÔNG hiện menu "Chọn hành động"; game tự xác nhận gieo và quân đi.
+            Assert.That(Object.FindObjectsByType<Button>(FindObjectsInactive.Include, FindObjectsSortMode.None)
+                .Any(b => b.name.StartsWith("OptionButton_") && b.gameObject.activeInHierarchy), Is.False,
+                "Ngay sau khi tung không được hiện menu chọn hành động.");
+            float movingDeadline = Time.realtimeSinceStartup + 15;
+            while (host.Match.QuerySnapshot().Phase != TurnPhase.Moving && Time.realtimeSinceStartup < movingDeadline) yield return null;
+            Assert.That(host.Match.QuerySnapshot().Phase, Is.EqualTo(TurnPhase.Moving), "Sau hoạt ảnh xúc xắc quân phải tự di chuyển.");
             timeout = Time.realtimeSinceStartup + 15;
             while (host.Match.QuerySnapshot().Phase == TurnPhase.Moving && Time.realtimeSinceStartup < timeout) yield return null;
             Assert.That(host.Match.QuerySnapshot().Phase, Is.Not.EqualTo(TurnPhase.Moving), "Board phải callback về Core sau animation.");

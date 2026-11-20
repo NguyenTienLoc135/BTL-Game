@@ -17,6 +17,8 @@ namespace BtlGame.Core
     public sealed class UnityMatchHost : MonoBehaviour
     {
         private static MatchSetupRequest _nextSetup;
+        private static MatchSetupRequest _lastSetup;   // cấu hình trận đang/đã chơi, dùng cho "Chơi lại"
+        private IMatchResultUi _resultUi;
         private MainMenuSetupController _menu;
         private IGameplayUi _ui;
         private BoardView _board;
@@ -30,7 +32,7 @@ namespace BtlGame.Core
         public MatchCoordinator Match { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetSetup() => _nextSetup = null;
+        private static void ResetSetup() { _nextSetup = null; _lastSetup = null; }
 
         private void Start()
         {
@@ -52,6 +54,7 @@ namespace BtlGame.Core
                 return;
             }
             MatchSetupRequest setup = _nextSetup;
+            _lastSetup = setup;
             _nextSetup = null;
             Match = CreateMatch(setup);
             foreach (PlayerSnapshot player in Match.QuerySnapshot().Players)
@@ -59,9 +62,32 @@ namespace BtlGame.Core
             _ui.ActionRequested += OnHudAction;
             _ui.DecisionRequested += OnDecision;
             _ui.CardIntentRequested += OnCardIntent;
+            _resultUi = FindResultUi();
+            if (_resultUi != null)
+            {
+                _resultUi.RestartRequested += OnRestartRequested;
+                _resultUi.MenuRequested += OnMenuRequested;
+            }
             _board.PresentationCompleted += OnPresentationCompleted;
             Refresh();
         }
+
+        private static IMatchResultUi FindResultUi()
+        {
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (behaviour is IMatchResultUi ui) return ui;
+            return null;
+        }
+
+        // "Chơi lại": dựng lại đúng cấu hình trận vừa chơi (cùng chế độ, số người, nghề, thời gian) rồi nạp lại Scene Gameplay.
+        private void OnRestartRequested()
+        {
+            if (_lastSetup == null) { SceneManager.LoadScene("MainMenu"); return; }
+            QueueMatch(_lastSetup);
+            SceneManager.LoadScene("Gameplay");
+        }
+
+        private void OnMenuRequested() => SceneManager.LoadScene("MainMenu");
 
         private static IGameplayUi FindGameplayUi()
         {
@@ -138,10 +164,36 @@ namespace BtlGame.Core
                 ActionResult result = ai.Step();
                 if (result != null) HandleResult(result);
             }
+            // Sau khi tung: chỉ chiếu hoạt ảnh xúc xắc rồi tự đi tiếp; menu "Chọn hành động" chỉ hiện khi quân đã tới ô.
+            // Chỉ còn một lựa chọn duy nhất (xác nhận gieo) thì không hỏi; Strategist có quyền gieo lại vẫn thấy lựa chọn.
+            else if (snapshot.Phase == TurnPhase.AwaitingRollConfirmation)
+            {
+                if (!AutoConfirmRoll(actor)) ShowOptions(Match.QueryLegalActions(actor));
+            }
             else if (snapshot.Phase == TurnPhase.ResolvingLanding || snapshot.Phase == TurnPhase.AwaitingObligation ||
-                snapshot.Phase == TurnPhase.AwaitingJailChoice || snapshot.Phase == TurnPhase.AwaitingRollConfirmation)
+                snapshot.Phase == TurnPhase.AwaitingJailChoice)
                 ShowOptions(Match.QueryLegalActions(actor));
             RenderHud(Match.QuerySnapshot());
+        }
+
+        private const float RollRevealSeconds = 1.8f;
+        private float _confirmRollAt;
+
+        /// <summary>true nếu đang tự xử lý bước xác nhận gieo (chờ hoạt ảnh xúc xắc rồi di chuyển); false nếu có lựa chọn thật cần hiển thị.</summary>
+        private bool AutoConfirmRoll(int actor)
+        {
+            IReadOnlyList<LegalAction> legal = Match.QueryLegalActions(actor);
+            if (legal.Count != 1 || legal[0].Kind != GameActionKind.ConfirmRoll)
+            {
+                _confirmRollAt = 0f;
+                return false;
+            }
+
+            if (_confirmRollAt <= 0f) { _confirmRollAt = Time.unscaledTime + RollRevealSeconds; return true; }
+            if (Time.unscaledTime < _confirmRollAt) return true;
+            _confirmRollAt = 0f;
+            HandleResult(Match.SubmitAction(legal[0].ToCommand()));
+            return true;
         }
 
         private static int DecisionActor(GameSnapshot snapshot)
@@ -162,6 +214,12 @@ namespace BtlGame.Core
             if (snapshot.Status == MatchStatus.Finished && !_resultShown)
             {
                 _resultShown = true;
+                if (_resultUi != null)
+                {
+                    _popupId = ++_nextPopupId; // chặn thao tác HUD sau khi hết trận
+                    _resultUi.ShowMatchResult(MatchResultBuilder.Build(snapshot));
+                    return;
+                }
                 _popupId = ++_nextPopupId;
                 _ui.ShowDecision(new DecisionPrompt(_popupId, snapshot.CurrentPlayerId, snapshot.Revision,
                     DecisionPromptKind.Result, "Kết thúc trận", "Người thắng: " + string.Join(", ",
@@ -202,7 +260,9 @@ namespace BtlGame.Core
                     snapshot.CurrentPlayerId, snapshot.CompletedRounds + 1,
                     snapshot.ClockRemainingTicks == long.MaxValue ? (long?)null : snapshot.ClockRemainingTicks / TimeSpan.TicksPerSecond,
                     dice.HasValue ? (int?)dice.Value.First : null, dice.HasValue ? (int?)dice.Value.Second : null,
-                    snapshot.Status == MatchStatus.Finished));
+                    snapshot.Status == MatchStatus.Finished,
+                    snapshot.Properties.Where(p => p.OwnerId.HasValue).Select(p => new HudProperty(p.TileId, p.OwnerId.Value)).ToArray(),
+                    snapshot.PendingDiceRoll.HasValue ? (int?)snapshot.CurrentPlayerId : snapshot.LastDicePlayerId));
             _ui.SetRollLabel(snapshot.Phase == TurnPhase.EndTurn ? "KẾT THÚC LƯỢT" : "TUNG XÚC XẮC");
         }
 
@@ -225,6 +285,9 @@ namespace BtlGame.Core
 
         private void ShowOptions(IReadOnlyList<LegalAction> actions, bool localSelection = false)
         {
+            // Bán tài sản tự nguyện chỉ đi qua nút "Bán" của HUD (điểm dừng hợp lệ: trước gieo / sau khi ô xử lý xong, Q04),
+            // KHÔNG được chèn vào menu tự hiện của lượt (xác nhận gieo, ô vừa tới, tù...). Thanh lý bắt buộc (LiquidateProperty) là luồng riêng.
+            if (!localSelection) actions = actions.Where(a => a.Kind != GameActionKind.SellProperty).ToArray();
             if (_popupId != 0 || actions.Count == 0) return;
             _offered.Clear();
             var options = new List<DecisionOption>();
@@ -311,6 +374,11 @@ namespace BtlGame.Core
                 _ui.CardIntentRequested -= OnCardIntent;
             }
             if (_board != null) _board.PresentationCompleted -= OnPresentationCompleted;
+            if (_resultUi != null)
+            {
+                _resultUi.RestartRequested -= OnRestartRequested;
+                _resultUi.MenuRequested -= OnMenuRequested;
+            }
         }
     }
 }

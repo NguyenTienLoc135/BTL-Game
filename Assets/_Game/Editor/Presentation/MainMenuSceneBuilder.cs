@@ -31,6 +31,9 @@ namespace BTLGame.EditorTools
             BuildUi(root.transform);
             SceneKit.EnsureEventSystem(root.transform);
 
+            // Nhạc nền menu (Pizzicato jingles); tiếng click nút do UiClickSound trên Canvas phát.
+            SceneKit.AddMusic(root.transform, SceneKit.MenuMusic, 0.4f);
+
             AssetDatabase.SaveAssets();
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -213,7 +216,6 @@ namespace BTLGame.EditorTools
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 26;
             t.resizeTextMaxSize = 44;
-            AddOutline(t.gameObject, TextOutline, 2.5f);
             return button;
         }
 

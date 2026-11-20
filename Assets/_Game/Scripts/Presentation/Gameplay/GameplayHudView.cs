@@ -16,12 +16,17 @@ namespace BTLGame.Presentation
     {
         public const int MaxPlayers = 4;
 
+        private static readonly Color TextOnGold = new Color(0.36f, 0.18f, 0.02f);
+        private static readonly Color TextOnGoldSoft = new Color(0.42f, 0.22f, 0.03f);
+
         [Serializable]
         private sealed class PlayerRow
         {
             public GameObject Root;
             public Image Avatar;
+            public Image Coin;
             public Text Name;
+            public Text Role;
             public Text Cash;
             public GameObject Crown;
             public GameObject Highlight;
@@ -116,7 +121,8 @@ namespace BTLGame.Presentation
                 }
 
                 var p = players[i];
-                row.Name.text = string.IsNullOrEmpty(p.Role) ? p.Name : p.Name + " <size=20>· " + p.Role + "</size>";
+                row.Name.text = p.Name;
+                if (row.Role != null) row.Role.text = p.Role ?? string.Empty;
                 row.Cash.text = p.Bankrupt ? "Phá sản" : FormatMoney(p.Cash);
                 row.Avatar.color = p.Bankrupt ? new Color(0.6f, 0.6f, 0.65f) : p.Color;
             }
@@ -135,6 +141,12 @@ namespace BTLGame.Presentation
                 bool current = i == index;
                 if (row.Crown != null) row.Crown.SetActive(current);
                 if (row.Highlight != null) row.Highlight.SetActive(current);
+
+                // Người tới lượt nằm trên nền vàng: chữ nâu đậm cho dễ đọc; các hàng còn lại nền xanh: chữ sáng.
+                if (row.Name != null) row.Name.color = current ? TextOnGold : Color.white;
+                if (row.Role != null) row.Role.color = current ? TextOnGoldSoft : new Color(0.86f, 0.9f, 1f);
+                if (row.Cash != null) row.Cash.color = current ? TextOnGold : new Color(1f, 0.95f, 0.7f);
+                if (row.Coin != null) row.Coin.color = current ? TextOnGold : new Color(1f, 0.82f, 0.2f);
             }
         }
 

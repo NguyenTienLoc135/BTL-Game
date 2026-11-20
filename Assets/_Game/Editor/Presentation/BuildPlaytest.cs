@@ -18,7 +18,7 @@ namespace BTLGame.EditorTools
                 scenes = new[] { "Assets/_Game/Scenes/MainMenu.unity", "Assets/_Game/Scenes/Gameplay.unity" }, // index 0, 1 theo AGENTS.md
                 locationPathName = Output,
                 target = BuildTarget.StandaloneWindows64,
-                options = BuildOptions.None
+                options = BuildOptions.Development
             };
 
             BuildReport report = BuildPipeline.BuildPlayer(options);

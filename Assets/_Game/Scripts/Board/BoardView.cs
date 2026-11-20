@@ -29,6 +29,9 @@ namespace BTLGame.Board
         private bool _visualsBound;
 
         public event Action<long, long> PresentationCompleted;
+
+        /// <summary>Phát sau mỗi bước quân đi qua một ô (cho hiệu ứng âm thanh); không ảnh hưởng luật.</summary>
+        public event Action<int> Stepped;
         public bool IsAnimating => _animating;
 
         public void Configure(BoardTileView[] tiles, PlayerTokenView[] tokens)
@@ -161,6 +164,7 @@ namespace BTLGame.Board
                 }
                 token.SetPosition(to);
                 token.SetMovingPose(0f, i + 1f);
+                Stepped?.Invoke(movement.Path[i]);
             }
             _lastCompletedActionId = movement.ActionId;
             _hasCompletedAction = true;

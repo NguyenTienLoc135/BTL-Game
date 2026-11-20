@@ -9,6 +9,8 @@ namespace BTLGame.Board
         [SerializeField] private Renderer _accentRenderer;
         [SerializeField] private int _playerId = -1;
         [SerializeField] private int _seatIndex = -1;
+        // Mô hình mặc định nhìn về +z (quay lưng về camera cố định ở phía -z) → xoay nghỉ 180° để quân nhìn về phía người chơi.
+        [SerializeField] private float _restYaw = 180f;
 
         public int PlayerId => _playerId;
         public int SeatIndex => _seatIndex;
@@ -20,6 +22,7 @@ namespace BTLGame.Board
             _playerId = playerId;
             _seatIndex = seatIndex;
             if (_visualRoot == null) _visualRoot = transform.Find("VisualRoot");
+            if (_visualRoot != null) _visualRoot.localRotation = Quaternion.Euler(0f, _restYaw, 0f);
             if (_accentRenderer == null) _accentRenderer = transform.Find("AccentRing")?.GetComponent<Renderer>();
             SetColor(color);
         }
@@ -31,7 +34,7 @@ namespace BTLGame.Board
         {
             if (_visualRoot == null) return;
             _visualRoot.localPosition = Vector3.up * hopHeight;
-            _visualRoot.localRotation = Quaternion.Euler(0f, progress * 360f, 0f);
+            _visualRoot.localRotation = Quaternion.Euler(0f, _restYaw + progress * 360f, 0f);
         }
 
         private void SetColor(Color color)

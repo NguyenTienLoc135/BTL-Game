@@ -87,7 +87,7 @@ namespace BTLGame.EditorTools
             tokensProp.arraySize = tokens.Length;
             for (int i = 0; i < tokens.Length; i++) tokensProp.GetArrayElementAtIndex(i).objectReferenceValue = tokens[i];
             so.FindProperty("_tokenLift").floatValue = SlabHeight + 0.14f;
-            so.FindProperty("_tokenSpread").floatValue = 0.36f;
+            so.FindProperty("_tokenSpread").floatValue = 0.5f;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -102,7 +102,7 @@ namespace BTLGame.EditorTools
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 go.name = "PlayerTokenSlot_" + i;
                 go.transform.SetParent(root, false);
-                go.transform.localScale = Vector3.one * 1.5f;
+                go.transform.localScale = Vector3.one * 2.2f;
                 result[i] = go.GetComponent<PlayerTokenView>();
             }
 
@@ -180,31 +180,9 @@ namespace BTLGame.EditorTools
                 tileGo.transform.SetParent(tilesRoot, false);
                 tileGo.transform.position = new Vector3(c.x, 0f, c.y);
 
-                // "Body" = phần BoardTileView.Bind tô màu theo catalog: thành phố/bãi biển → dải màu phía trong;
-                // góc, ô thẻ, ô thuế → chính mặt ô. Thân kem ("Base") của thành phố/bãi biển giữ màu cố định.
-                bool banded = !corner && (tile.Type == T.City || tile.Type == T.Beach);
-                Renderer bodyRenderer;
-                if (banded)
-                {
-                    Material baseMat = tile.Type == T.Beach
-                        ? SceneKit.Mat("TileBase_Sand", SandYellow)
-                        : SceneKit.Mat("TileBase_" + hex, Color.Lerp(CreamColor, accent, 0.3f));
-                    SceneKit.Primitive(PrimitiveType.Cube, "Base", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
-                        new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), baseMat);
-
-                    const float bandDepth = 0.8f;
-                    var bandSize = new Vector3(
-                        Mathf.Abs(inward.x) > 0.5f ? bandDepth : size.x - 0.2f, 0.06f,
-                        Mathf.Abs(inward.y) > 0.5f ? bandDepth : size.y - 0.2f);
-                    var bandOffset = inward3 * (Depth / 2f - bandDepth / 2f - 0.06f);
-                    bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, bandOffset + new Vector3(0f, SlabHeight + 0.03f, 0f),
-                        bandSize, SceneKit.Mat("TileBand_" + hex, accent)).GetComponent<Renderer>();
-                }
-                else
-                {
-                    bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
-                        new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), SceneKit.Mat("Tile_" + hex, accent)).GetComponent<Renderer>();
-                }
+                // "Body" = mặt ô, BoardTileView.Bind tô màu theo catalog. Mọi ô (kể cả thành phố/bãi biển) phủ KÍN màu cả ô.
+                var bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
+                    new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), SceneKit.Mat("Tile_" + hex, accent)).GetComponent<Renderer>();
 
                 if (corner)
                 {
@@ -228,7 +206,7 @@ namespace BTLGame.EditorTools
                 if (tile.Type == T.City)
                 {
                     string[] names = { "Stake", "House1", "House2", "House3", "Hotel" };
-                    float[] heights = { 0.55f, 0.75f, 1.0f, 1.25f, 1.7f };
+                    float[] heights = { 1.3f, 0.92f, 1.25f, 1.56f, 2.7f }; // = chiều cao thiết kế của prefab (BuildingPrefabBuilder), không bóp méo
                     for (int k = 0; k < 5; k++)
                     {
                         var holder = SceneKit.Spawn(BuildingDir + "Building_" + names[k] + ".prefab", tileGo.transform,

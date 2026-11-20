@@ -58,7 +58,6 @@ namespace BTLGame.EditorTools
             // --- Chi tiết nghề của người đang chọn
             var detail = NewImage("RoleDetail", inner, BtnBlue, NavyDeep, new Vector2(0f, -200f), new Vector2(1440f, 270f));
             var detailTitle = NewText("DetailTitle", detail.transform, string.Empty, Black, 28, Gold, TextAnchor.MiddleLeft, new Vector2(-30f, 105f), new Vector2(1340f, 44f));
-            AddOutline(detailTitle.gameObject, GoldOutline, 1.5f);
             var passive = DetailColumn(detail.transform, "Passive (nội tại)", -540f);
             var active = DetailColumn(detail.transform, "Active (chủ động)", -180f);
             var ultimate = DetailColumn(detail.transform, "Ultimate (1 lần/trận)", 180f);
@@ -66,7 +65,7 @@ namespace BTLGame.EditorTools
 
             // --- Nút dưới
             var back = SecondaryButton(inner, "Btn_Back", "Quay lại", new Vector2(-230f, -378f), new Vector2(340f, 84f), 32);
-            var start = PrimaryButton(inner, "Btn_StartMatch", "Bắt đầu trận", new Vector2(230f, -378f), new Vector2(460f, 92f), 38, Icon("dice"));
+            var start = PrimaryButton(inner, "Btn_StartMatch", "Bắt đầu trận", new Vector2(230f, -378f), new Vector2(460f, 92f), 38, IconPlay);
 
             // --- Gắn field cho MatchSetupView
             var view = parts.Root.AddComponent<MatchSetupView>();
@@ -179,7 +178,7 @@ namespace BTLGame.EditorTools
             r.SeatBar = NewImage("SeatBar", body.transform, BtnGrey, seatColor, new Vector2(0f, 82f), new Vector2(296f, 52f));
             r.SeatBar.raycastTarget = false;
             r.SeatName = NewText("SeatName", r.SeatBar.transform, "Người chơi", Bold, 26, Color.white, TextAnchor.MiddleCenter, new Vector2(0f, 3f), new Vector2(280f, 44f));
-            AddOutline(r.SeatName.gameObject, TextOutline, 2f);
+            r.SeatName.color = TextDark; // chữ tối trên thanh màu pastel, không viền → nét sắc
 
             var circle = NewImage("IconCircle", body.transform, RoundGrey, NavyDeep, new Vector2(0f, 2f), new Vector2(100f, 100f));
             circle.raycastTarget = false;
@@ -198,7 +197,7 @@ namespace BTLGame.EditorTools
         private static Text DetailColumn(Transform parent, string header, float x)
         {
             var h = NewText("Header", parent, header, Black, 22, Gold, TextAnchor.MiddleLeft, new Vector2(x, 55f), new Vector2(330f, 36f));
-            AddOutline(h.gameObject, GoldOutline, 1.2f);
+            // Tiêu đề cột: vàng trên nền navy, không viền để nét chữ sắc.
             var body = NewText("Body", parent, string.Empty, Regular, 20, Color.white, TextAnchor.UpperLeft, new Vector2(x, -55f), new Vector2(330f, 160f));
             body.resizeTextForBestFit = true;
             body.resizeTextMinSize = 14;

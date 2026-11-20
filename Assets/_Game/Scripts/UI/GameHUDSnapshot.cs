@@ -30,9 +30,17 @@ namespace BTLGame.UI
         public int? Die2 { get; private set; }
         public bool MatchFinished { get; private set; }
 
+        /// <summary>Người đã tung cặp xúc xắc đang hiển thị (cùng với Die1/Die2 giữ nguyên qua các lượt) — để nhận biết một lần tung MỚI.</summary>
+        public int? DiceRollerId { get; private set; }
+
+        /// <summary>Các ô đang có chủ (chỉ đọc) — dùng để hiển thị hiệu ứng độc quyền, không tính luật.</summary>
+        public IReadOnlyList<HudProperty> Properties { get; private set; } = new HudProperty[0];
+
         public GameHUDSnapshot WithDetails(IReadOnlyList<HudPlayerInfo> players, int currentPlayerId, long round,
-            long? clockSeconds, int? die1, int? die2, bool matchFinished)
+            long? clockSeconds, int? die1, int? die2, bool matchFinished, IReadOnlyList<HudProperty> properties = null, int? diceRollerId = null)
         {
+            Properties = properties ?? new HudProperty[0];
+            DiceRollerId = diceRollerId;
             Players = players ?? new HudPlayerInfo[0];
             CurrentPlayerId = currentPlayerId;
             Round = round;
@@ -81,6 +89,19 @@ namespace BTLGame.UI
             Cash = cash;
             RoleName = roleName ?? string.Empty;
             Bankrupt = bankrupt;
+        }
+    }
+
+    /// <summary>Một ô đã có chủ: id ô và id người sở hữu.</summary>
+    public readonly struct HudProperty
+    {
+        public int TileId { get; }
+        public int OwnerId { get; }
+
+        public HudProperty(int tileId, int ownerId)
+        {
+            TileId = tileId;
+            OwnerId = ownerId;
         }
     }
 
