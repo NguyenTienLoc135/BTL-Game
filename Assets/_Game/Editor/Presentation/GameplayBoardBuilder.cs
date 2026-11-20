@@ -10,7 +10,8 @@ namespace BTLGame.EditorTools
 {
     /// <summary>
     /// Dựng bàn cờ 3D 32 ô (PRESENTATION) cho Scene Gameplay; được GameplaySceneBuilder gọi.
-    /// Bảng tên/loại ô phản chiếu GAME_RULES §3 chỉ để vẽ nhãn; luật và giá do Core/BoardCatalog quản lý.
+    /// Tên/loại/màu ô lấy từ BoardVisualCatalog (nguồn duy nhất, của nhóm B); luật và giá do Core quản lý.
+    /// Mỗi ô là một BoardTileView để BoardView (Codex) đặt quân, chủ sở hữu và công trình theo trạng thái Core.
     /// Bố cục (người dùng đã chọn): ô 0 ở góc dưới-phải, đi theo chiều kim đồng hồ;
     /// góc 0/8/16/24 = Xuất phát / Nhà tù / Tổ chức sự kiện / Dịch chuyển.
     /// </summary>
@@ -23,95 +24,89 @@ namespace BTLGame.EditorTools
         private const float Half = 10f;
         private const float EdgeCenter = Half - Depth / 2f; // 8.5
         private const float SlabHeight = 0.4f;
+        private const int TileCount = 32;
         private static readonly Color CreamColor = new Color(0.99f, 0.96f, 0.88f);
+        private static readonly Color SandYellow = new Color(0.97f, 0.89f, 0.64f);
+
+        private const string BuildingDir = "Assets/_Game/Prefabs/Buildings/";
+        private const string TokenDir = "Assets/_Game/Prefabs/Characters/";
 
         private enum T { Start, City, Beach, Jail, Card, Festival, Teleport, Tax }
 
-        private struct Tile
+        private readonly struct Tile
         {
             public readonly T Type;
             public readonly string Name;
-            public readonly string Country;
+            public readonly Color Color;
 
-            public Tile(T type, string name, string country = null)
+            public Tile(T type, string name, Color color)
             {
                 Type = type;
                 Name = name;
-                Country = country;
+                Color = color;
             }
         }
 
-        // GAME_RULES §3 — ID ô 0–31 bất biến. Chỉ tên hiển thị + nhóm quốc gia, KHÔNG có giá.
-        private static readonly Tile[] Tiles =
+        private static T ToType(BoardTileAppearance a)
         {
-            new Tile(T.Start, "Xuất phát"),
-            new Tile(T.City, "Hà Nội", "VN"), new Tile(T.City, "Đà Nẵng", "VN"), new Tile(T.City, "TP. Hồ Chí Minh", "VN"),
-            new Tile(T.Beach, "Bãi biển"),
-            new Tile(T.City, "Kyoto", "JP"), new Tile(T.City, "Osaka", "JP"), new Tile(T.City, "Tokyo", "JP"),
-            new Tile(T.Jail, "Nhà tù"),
-            new Tile(T.City, "Incheon", "KR"), new Tile(T.City, "Busan", "KR"), new Tile(T.City, "Seoul", "KR"),
-            new Tile(T.Card, "Thẻ sự kiện"),
-            new Tile(T.City, "Lyon", "FR"),
-            new Tile(T.Beach, "Bãi biển"),
-            new Tile(T.City, "Paris", "FR"),
-            new Tile(T.Festival, "Tổ chức sự kiện"),
-            new Tile(T.City, "Milan", "IT"),
-            new Tile(T.Beach, "Bãi biển"),
-            new Tile(T.City, "Rome", "IT"),
-            new Tile(T.Card, "Thẻ sự kiện"),
-            new Tile(T.City, "Chicago", "US"), new Tile(T.City, "Los Angeles", "US"), new Tile(T.City, "New York", "US"),
-            new Tile(T.Teleport, "Dịch chuyển"),
-            new Tile(T.Beach, "Bãi biển"),
-            new Tile(T.City, "Manchester", "GB"), new Tile(T.City, "London", "GB"),
-            new Tile(T.Card, "Thẻ sự kiện"),
-            new Tile(T.City, "Melbourne", "AU"),
-            new Tile(T.Tax, "Thuế"),
-            new Tile(T.City, "Sydney", "AU"),
-        };
+            switch (a)
+            {
+                case BoardTileAppearance.Start: return T.Start;
+                case BoardTileAppearance.City: return T.City;
+                case BoardTileAppearance.Beach: return T.Beach;
+                case BoardTileAppearance.Jail: return T.Jail;
+                case BoardTileAppearance.Event: return T.Card;
+                case BoardTileAppearance.Festival: return T.Festival;
+                case BoardTileAppearance.Teleport: return T.Teleport;
+                default: return T.Tax;
+            }
+        }
 
-        // Màu pastel nhẹ, hài hòa với bãi cỏ/sông; không dùng màu nóng gắt. Mỗi quốc gia một màu chung cho cả nhóm thành phố.
-        private static readonly Dictionary<string, Color> CountryColors = new Dictionary<string, Color>
+        private static Tile GetTile(int id)
         {
-            { "VN", new Color(0.58f, 0.84f, 0.72f) },  // mint
-            { "JP", new Color(0.94f, 0.76f, 0.83f) },  // hồng phấn
-            { "KR", new Color(0.62f, 0.8f, 0.95f) },   // xanh trời
-            { "FR", new Color(0.7f, 0.72f, 0.95f) },   // tím xanh
-            { "IT", new Color(0.77f, 0.87f, 0.6f) },   // xanh lá non
-            { "US", new Color(0.97f, 0.82f, 0.68f) },  // đào nhạt
-            { "GB", new Color(0.52f, 0.8f, 0.82f) },   // ngọc lam
-            { "AU", new Color(0.84f, 0.74f, 0.9f) },   // tím hoa cà
-        };
-
-        private static readonly Color SeaBlue = new Color(0.42f, 0.74f, 0.92f);
-        private static readonly Color SandYellow = new Color(0.97f, 0.89f, 0.64f);
-
-        // Màu dải/nền các ô chức năng (dịu).
-        private static readonly Dictionary<T, Color> TypeColors = new Dictionary<T, Color>
-        {
-            { T.Start, new Color(0.6f, 0.84f, 0.64f) }, { T.Beach, SeaBlue },
-            { T.Jail, new Color(0.7f, 0.73f, 0.8f) }, { T.Card, new Color(0.88f, 0.84f, 0.96f) },
-            { T.Festival, new Color(0.95f, 0.85f, 0.62f) }, { T.Teleport, new Color(0.7f, 0.72f, 0.94f) },
-            { T.Tax, new Color(0.9f, 0.68f, 0.72f) },
-        };
+            var def = BoardVisualCatalog.Get(id);
+            return new Tile(ToType(def.Appearance), def.DisplayName, def.Color);
+        }
 
         internal static void Build(Transform root)
         {
             var tilesRoot = new GameObject("Tiles").transform;
             tilesRoot.SetParent(root, false);
-            var anchors = BuildTiles(tilesRoot, root);
+            var tileViews = BuildTiles(tilesRoot, root);
             BuildCenter(root);
             BuildSurroundings(root);
+            var tokens = BuildTokens(root);
 
-            var view = root.gameObject.AddComponent<BoardTileAnchors>();
+            // BoardView (Codex) điều khiển quân/chủ ô/công trình theo snapshot của Core; vị trí lấy từ Transform thật của từng ô.
+            var view = root.gameObject.AddComponent<BoardView>();
             var so = new SerializedObject(view);
-            var arr = so.FindProperty("_tileAnchors");
-            arr.arraySize = BoardTileAnchors.TileCount;
-            for (int i = 0; i < BoardTileAnchors.TileCount; i++)
+            var tilesProp = so.FindProperty("_tiles");
+            tilesProp.arraySize = tileViews.Length;
+            for (int i = 0; i < tileViews.Length; i++) tilesProp.GetArrayElementAtIndex(i).objectReferenceValue = tileViews[i];
+            var tokensProp = so.FindProperty("_tokens");
+            tokensProp.arraySize = tokens.Length;
+            for (int i = 0; i < tokens.Length; i++) tokensProp.GetArrayElementAtIndex(i).objectReferenceValue = tokens[i];
+            so.FindProperty("_tokenLift").floatValue = SlabHeight + 0.14f;
+            so.FindProperty("_tokenSpread").floatValue = 0.36f;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>4 quân cờ từ prefab của nhóm (PlayerToken_*), phóng to cho vừa ô lớn; BoardView bật/tắt theo số người.</summary>
+        private static PlayerTokenView[] BuildTokens(Transform root)
+        {
+            string[] names = { "Red", "Blue", "Gold", "Green" };
+            var result = new PlayerTokenView[4];
+            for (int i = 0; i < 4; i++)
             {
-                arr.GetArrayElementAtIndex(i).objectReferenceValue = anchors[i];
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(TokenDir + "PlayerToken_" + names[i] + ".prefab");
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                go.name = "PlayerTokenSlot_" + i;
+                go.transform.SetParent(root, false);
+                go.transform.localScale = Vector3.one * 1.5f;
+                result[i] = go.GetComponent<PlayerTokenView>();
             }
 
-            so.ApplyModifiedPropertiesWithoutUndo();
+            return result;
         }
 
         // ------------------------------------------------------------ vị trí 32 ô
@@ -158,11 +153,11 @@ namespace BTLGame.EditorTools
             }
         }
 
-        private static Transform[] BuildTiles(Transform tilesRoot, Transform root)
+        private static BoardTileView[] BuildTiles(Transform tilesRoot, Transform root)
         {
-            var anchors = new Transform[Tiles.Length];
+            var views = new BoardTileView[TileCount];
 
-            // Một Canvas world-space chung cho nhãn + cờ, nằm phẳng trên mặt bàn (đọc được từ camera phía -z).
+            // Một Canvas world-space chung cho nhãn + hình in, nằm phẳng trên mặt bàn (đọc được từ camera phía -z).
             var canvasGo = new GameObject("Labels", typeof(RectTransform), typeof(Canvas));
             canvasGo.transform.SetParent(root, false);
             canvasGo.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
@@ -172,55 +167,95 @@ namespace BTLGame.EditorTools
             crt.position = new Vector3(0f, SlabHeight + 0.075f, 0f);
             crt.rotation = Quaternion.Euler(90f, 0f, 0f);
 
-            var cream = SceneKit.Mat("Tile_Cream", new Color(0.99f, 0.96f, 0.88f));
-
-            for (int id = 0; id < Tiles.Length; id++)
+            for (int id = 0; id < views.Length; id++)
             {
-                var tile = Tiles[id];
+                var tile = GetTile(id);
                 Layout(id, out var c, out var size, out var inward);
                 bool corner = id % 8 == 0;
-                Color accent = tile.Type == T.City ? CountryColors[tile.Country] : TypeColors[tile.Type];
+                Color accent = tile.Color; // = màu của "Body" trong catalog; BoardTileView.Bind tô lại đúng màu này lúc chạy
+                string hex = ColorUtility.ToHtmlStringRGB(accent);
+                Vector3 inward3 = new Vector3(inward.x, 0f, inward.y);
 
                 var tileGo = new GameObject($"Tile_{id:00}_{tile.Name}");
                 tileGo.transform.SetParent(tilesRoot, false);
                 tileGo.transform.position = new Vector3(c.x, 0f, c.y);
-                anchors[id] = tileGo.transform;
 
-                // Thân ô: thành phố = kem pha 30% màu quốc gia; bãi biển = cát vàng; thẻ = tím nhạt; góc = màu loại ô.
-                Material body;
-                switch (tile.Type)
+                // "Body" = phần BoardTileView.Bind tô màu theo catalog: thành phố/bãi biển → dải màu phía trong;
+                // góc, ô thẻ, ô thuế → chính mặt ô. Thân kem ("Base") của thành phố/bãi biển giữ màu cố định.
+                bool banded = !corner && (tile.Type == T.City || tile.Type == T.Beach);
+                Renderer bodyRenderer;
+                if (banded)
                 {
-                    case T.City: body = SceneKit.Mat("TileBody_" + tile.Country, Color.Lerp(CreamColor, accent, 0.3f)); break;
-                    case T.Beach: body = SceneKit.Mat("TileBody_Sand", SandYellow); break;
-                    case T.Card: body = SceneKit.Mat("TileBody_Card", new Color(0.93f, 0.9f, 0.98f)); break;
-                    case T.Tax: body = SceneKit.Mat("TileBody_Tax", Color.Lerp(CreamColor, accent, 0.25f)); break;
-                    default: body = corner ? SceneKit.Mat("Tile_" + tile.Type, accent) : cream; break;
-                }
+                    Material baseMat = tile.Type == T.Beach
+                        ? SceneKit.Mat("TileBase_Sand", SandYellow)
+                        : SceneKit.Mat("TileBase_" + hex, Color.Lerp(CreamColor, accent, 0.3f));
+                    SceneKit.Primitive(PrimitiveType.Cube, "Base", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
+                        new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), baseMat);
 
-                SceneKit.Primitive(PrimitiveType.Cube, "Base", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
-                    new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), body);
+                    const float bandDepth = 0.8f;
+                    var bandSize = new Vector3(
+                        Mathf.Abs(inward.x) > 0.5f ? bandDepth : size.x - 0.2f, 0.06f,
+                        Mathf.Abs(inward.y) > 0.5f ? bandDepth : size.y - 0.2f);
+                    var bandOffset = inward3 * (Depth / 2f - bandDepth / 2f - 0.06f);
+                    bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, bandOffset + new Vector3(0f, SlabHeight + 0.03f, 0f),
+                        bandSize, SceneKit.Mat("TileBand_" + hex, accent)).GetComponent<Renderer>();
+                }
+                else
+                {
+                    bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
+                        new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), SceneKit.Mat("Tile_" + hex, accent)).GetComponent<Renderer>();
+                }
 
                 if (corner)
                 {
                     AddCornerProp(tileGo.transform, tile.Type);
                 }
 
-                // Dải màu phía trong bàn cờ: thành phố (màu quốc gia), bãi biển (xanh biển). Ô thẻ và ô thuế để trơn cho hình in.
-                if (!corner && tile.Type != T.Card && tile.Type != T.Tax)
+                // Chủ sở hữu (thành phố/bãi biển): thanh màu mỏng ở mép ngoài ô, ẩn cho tới khi có chủ (BoardTileView.SetOwner).
+                Renderer owner = null;
+                Transform[] stages = new Transform[5];
+                if (tile.Type == T.City || tile.Type == T.Beach)
                 {
-                    const float bandDepth = 0.8f;
-                    var bandSize = new Vector3(
-                        Mathf.Abs(inward.x) > 0.5f ? bandDepth : size.x - 0.2f, 0.06f,
-                        Mathf.Abs(inward.y) > 0.5f ? bandDepth : size.y - 0.2f);
-                    var bandOffset = new Vector3(inward.x, 0f, inward.y) * (Depth / 2f - bandDepth / 2f - 0.06f);
-                    SceneKit.Primitive(PrimitiveType.Cube, "Band", tileGo.transform, bandOffset + new Vector3(0f, SlabHeight + 0.03f, 0f), bandSize,
-                        SceneKit.Mat(tile.Type == T.City ? "Country_" + tile.Country : "Tile_" + tile.Type, accent));
+                    bool horizontal = Mathf.Abs(inward.y) > 0.5f;
+                    var markerSize = horizontal ? new Vector3(size.x - 0.3f, 0.1f, 0.16f) : new Vector3(0.16f, 0.1f, size.y - 0.3f);
+                    var markerGo = SceneKit.Primitive(PrimitiveType.Cube, "OwnerMarker", tileGo.transform,
+                        -inward3 * (Depth / 2f - 0.14f) + new Vector3(0f, SlabHeight + 0.05f, 0f), markerSize, SceneKit.Mat("OwnerMarker", Color.white));
+                    owner = markerGo.GetComponent<Renderer>();
+                    markerGo.SetActive(false);
                 }
+
+                // Công trình Cọc/Nhà 1–3/Khách sạn từ prefab của nhóm, ẩn cho tới khi Core báo cấp tương ứng (chỉ thành phố).
+                if (tile.Type == T.City)
+                {
+                    string[] names = { "Stake", "House1", "House2", "House3", "Hotel" };
+                    float[] heights = { 0.55f, 0.75f, 1.0f, 1.25f, 1.7f };
+                    for (int k = 0; k < 5; k++)
+                    {
+                        var holder = SceneKit.Spawn(BuildingDir + "Building_" + names[k] + ".prefab", tileGo.transform,
+                            tileGo.transform.position + inward3 * 0.8f + new Vector3(0f, SlabHeight, 0f), heights[k], 0f);
+                        if (holder != null)
+                        {
+                            stages[k] = holder.transform;
+                            holder.SetActive(false);
+                        }
+                    }
+                }
+
+                var view = tileGo.AddComponent<BoardTileView>();
+                var so = new SerializedObject(view);
+                so.FindProperty("_tileId").intValue = id;
+                so.FindProperty("_bodyRenderer").objectReferenceValue = bodyRenderer;
+                so.FindProperty("_ownerMarker").objectReferenceValue = owner;
+                var stagesProp = so.FindProperty("_propertyStages");
+                stagesProp.arraySize = stages.Length;
+                for (int k = 0; k < stages.Length; k++) stagesProp.GetArrayElementAtIndex(k).objectReferenceValue = stages[k];
+                so.ApplyModifiedPropertiesWithoutUndo();
+                views[id] = view;
 
                 AddTileLabel(canvasGo.transform, tile, c, size, inward);
             }
 
-            return anchors;
+            return views;
         }
 
         /// <summary>

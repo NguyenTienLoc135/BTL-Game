@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
-using BTLGame.UI;
+using BTLGame.Presentation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -11,7 +11,7 @@ namespace BTLGame.EditorTools
     /// <summary>Tiện ích dựng Scene dùng chung (model 3D, vật liệu, EventSystem, tiếng click) cho MainMenu và Gameplay.</summary>
     internal static class SceneKit
     {
-        private const string MatDir = "Assets/_Game/Materials/Generated";
+        private const string MatDir = "Assets/_Game/Materials/Presentation";
 
         internal const string Commercial = "Assets/ThirdParty/Kenney/CityCommercial/Models/FBX/";
         internal const string Suburban = "Assets/ThirdParty/Kenney/CitySuburban/Models/FBX/";
@@ -51,7 +51,27 @@ namespace BTLGame.EditorTools
             return holder;
         }
 
-        /// <summary>Vật liệu URP/Lit đơn sắc, lưu dưới Assets/_Game/Materials/Generated (tái dùng theo tên).</summary>
+        /// <summary>
+        /// Đưa Scene về trạng thái sạch: xóa mọi object gốc (kể cả nội dung Scene cũ) rồi tạo lại Main Camera + Directional Light.
+        /// Builder giao diện dựng lại TOÀN BỘ Scene nên không để lẫn nội dung của bản dựng khác.
+        /// </summary>
+        internal static void ResetScene(UnityEngine.SceneManagement.Scene scene)
+        {
+            foreach (var go in scene.GetRootGameObjects())
+            {
+                Object.DestroyImmediate(go);
+            }
+
+            var cam = new GameObject("Main Camera", typeof(Camera), typeof(AudioListener));
+            cam.tag = "MainCamera";
+            cam.transform.position = new Vector3(0f, 1f, -10f);
+
+            var lightGo = new GameObject("Directional Light", typeof(Light));
+            lightGo.GetComponent<Light>().type = LightType.Directional;
+            lightGo.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        }
+
+        /// <summary>Vật liệu URP/Lit đơn sắc, lưu dưới Assets/_Game/Materials/Presentation (tái dùng theo tên).</summary>
         internal static Material Mat(string name, Color color, float smoothness = 0.15f)
         {
             Directory.CreateDirectory(MatDir);

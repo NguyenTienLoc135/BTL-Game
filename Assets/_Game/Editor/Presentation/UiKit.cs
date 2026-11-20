@@ -1,6 +1,6 @@
 #if UNITY_EDITOR
 using System.IO;
-using BTLGame.UI;
+using BTLGame.Presentation;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,11 +31,11 @@ namespace BTLGame.EditorTools
         internal static readonly Color TextDark = new Color(0.2f, 0.2f, 0.42f);
         internal static readonly Color TextOutline = new Color(0.08f, 0.1f, 0.3f, 0.85f);
 
-        /// <summary>Màu theo ghế 0–3, dùng chung cho màn thiết lập và HUD để người chơi nhận ra đúng người.</summary>
-        internal static readonly Color[] SeatColors =
+        /// <summary>Màu theo ghế 0–3: MỘT nguồn duy nhất là BoardView.GetSeatColor (quân cờ, chủ ô, HUD, màn thiết lập).</summary>
+        internal static Color[] SeatColors => new[]
         {
-            new Color(0.95f, 0.65f, 0.25f), new Color(0.95f, 0.5f, 0.7f),
-            new Color(0.45f, 0.75f, 0.95f), new Color(0.95f, 0.85f, 0.35f)
+            BTLGame.Board.BoardView.GetSeatColor(0), BTLGame.Board.BoardView.GetSeatColor(1),
+            BTLGame.Board.BoardView.GetSeatColor(2), BTLGame.Board.BoardView.GetSeatColor(3)
         };
 
         internal static readonly Vector4 ButtonBorder = new Vector4(36f, 44f, 36f, 36f); // L,B,R,T
@@ -490,12 +490,13 @@ namespace BTLGame.EditorTools
             public UiPopup Popup;
             public GameObject Root;
             public RectTransform Inner;   // vùng nội dung (tâm = tâm bảng kem)
+            public Text TitleText;        // chữ tiêu đề (đổi được lúc chạy)
         }
 
         /// <summary>
         /// Popup chuẩn: nền mờ bấm để đóng, khung navy, bảng kem, tab tiêu đề nổi, nút X đỏ. Mặc định ẩn.
         /// </summary>
-        internal static PopupParts Popup(Transform canvas, string name, string title, Vector2 frameSize, Sprite titleIcon = null)
+        internal static PopupParts Popup(Transform canvas, string name, string title, Vector2 frameSize, Sprite titleIcon = null, bool dismissible = true)
         {
             var dim = NewImage(name, canvas, null, new Color(0f, 0f, 0f, 0.6f), Vector2.zero, Vector2.zero);
             Stretch(dim.rectTransform);
@@ -504,9 +505,13 @@ namespace BTLGame.EditorTools
             // mọi cú bấm vào vùng trống trong khung (kể cả kéo thanh trượt) sẽ nổi bọt lên và đóng popup.
             var backdropImg = NewImage("Backdrop", dim.transform, null, new Color(0f, 0f, 0f, 0.001f), Vector2.zero, Vector2.zero);
             Stretch(backdropImg.rectTransform);
-            var backdrop = backdropImg.gameObject.AddComponent<Button>();
-            backdrop.targetGraphic = backdropImg;
-            backdrop.transition = Selectable.Transition.None;
+            Button backdrop = null;
+            if (dismissible)
+            {
+                backdrop = backdropImg.gameObject.AddComponent<Button>();
+                backdrop.targetGraphic = backdropImg;
+                backdrop.transition = Selectable.Transition.None;
+            }
 
             var frame = NewImage("Frame", dim.transform, BtnBlue, NavyDeep, Vector2.zero, frameSize);
             var innerSize = new Vector2(frameSize.x - 80f, frameSize.y - 100f);
@@ -532,13 +537,17 @@ namespace BTLGame.EditorTools
             t.resizeTextMaxSize = 52;
             AddOutline(t.gameObject, new Color(0.12f, 0.12f, 0.4f, 0.9f), 3f);
 
-            var closeImg = NewImage("Btn_Close", frame.transform, RoundRed, Color.white, new Vector2(frameSize.x / 2f - 50f, frameSize.y / 2f - 10f), new Vector2(92f, 92f));
-            var close = closeImg.gameObject.AddComponent<Button>();
-            close.targetGraphic = closeImg;
-            StyleButton(close);
-            var cross = NewImage("Cross", closeImg.transform, IconCross, Color.white, new Vector2(0f, 4f), new Vector2(46f, 46f));
-            cross.raycastTarget = false;
-            AddShadow(cross.gameObject);
+            Button close = null;
+            if (dismissible)
+            {
+                var closeImg = NewImage("Btn_Close", frame.transform, RoundRed, Color.white, new Vector2(frameSize.x / 2f - 50f, frameSize.y / 2f - 10f), new Vector2(92f, 92f));
+                close = closeImg.gameObject.AddComponent<Button>();
+                close.targetGraphic = closeImg;
+                StyleButton(close);
+                var cross = NewImage("Cross", closeImg.transform, IconCross, Color.white, new Vector2(0f, 4f), new Vector2(46f, 46f));
+                cross.raycastTarget = false;
+                AddShadow(cross.gameObject);
+            }
 
             var popup = dim.gameObject.AddComponent<UiPopup>();
             var so = new SerializedObject(popup);
@@ -547,7 +556,7 @@ namespace BTLGame.EditorTools
             so.ApplyModifiedPropertiesWithoutUndo();
 
             dim.gameObject.SetActive(false);
-            return new PopupParts { Popup = popup, Root = dim.gameObject, Inner = inner.rectTransform };
+            return new PopupParts { Popup = popup, Root = dim.gameObject, Inner = inner.rectTransform, TitleText = t };
         }
     }
 }

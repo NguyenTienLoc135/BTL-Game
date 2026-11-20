@@ -6,7 +6,7 @@ Ngày cập nhật: **2026-11-17**. **Luật và phân công A/B/C/D đã đư�
 
 Đã đối chiếu [AGENTS.md](../AGENTS.md), [GAME_RULES.md](GAME_RULES.md), [README.md](../README.md), các tài liệu kỹ thuật và nội dung trích xuất thực tế từ [Word gốc](references/GAME_DESIGN_DOCUMENT.docx). Ưu tiên quyết định người dùng mới → Word cho phần không bị thay đổi → GAME_RULES → tài liệu kỹ thuật. Word hiện đã ghi tù tối đa3 lượt; các bổ sung khác theo [DECISIONS](DECISIONS.md). Không sửa Word trong nhiệm vụ này.
 
-Tên lớp/DTO và cách nối A01–A06 vẫn cần nhóm thống nhất. Q04/05/06/09/11/13/20, tù3 lượt và bổ sung Q03/10/12/14/15/16/17/19, P01/P02 ngày2026-11-17 đã có quyết định; Q02 deck còn PENDING, không có mặc định ngầm. A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md).
+Tên lớp/DTO và cách nối A01–A06 vẫn cần nhóm thống nhất. Q04/05/06/09/11/13/20, tù3 lượt và bổ sung Q03/10/12/14/15/16/17/19, P01/P02 ngày2026-11-17 đã có quyết định; Q02 đã được người dùng chốt ngày2026-11-19: ngẫu nhiên đều14 loại có hoàn lại, preview ổn định theo lần rút. A07 được thay bằng [TEAM_TASKS](TEAM_TASKS.md).
 
 Phạm vi: Unity6.6 (6000.6.4f1), URP, C#, PC/Windows;2–4 người cùng máy/AI, được trùng nghề. Không online, lưu/khôi phục trận, shop, tài khoản hoặc tính năng ngoài GAME_RULES §1.
 
@@ -33,7 +33,7 @@ Các tên dưới đây là ranh giới thư mục/namespace, chưa bắt buộc
 | Properties | Giá niêm yết, mua/nâng/cưỡng chế, sổ vốn, thuê, thuế theo tài sản, bán/thanh lý, truy vấn độc quyền | Duy trì danh sách chủ đất khác GameState; gán material Unity |
 | Characters | Catalog sáu nghề, dữ liệu người chơi, điều kiện đang chơi/bị giam/phá sản | Giữ số dư độc lập trong component nhân vật; tự giảm cooldown |
 | Skills | Điều kiện và kết quả Passive/Active/Ultimate/Weakness; lịch cooldown, hiệu ứng, khoản vay | Bỏ qua validator tài sản; quyết định lượt dựa trên animation |
-| Cards | Catalog đúng 14 loại, trình tự rút có thể kiểm thử, thẻ giữ, chọn mục tiêu, kết quả thẻ | Tự chốt shuffle/rút lại chưa được quy định; gọi trực tiếp UI |
+| Cards | Catalog đúng 14 loại, trình tự rút có thể kiểm thử, thẻ giữ, chọn mục tiêu, kết quả thẻ | Đổi chính sách Q02 đã duyệt; gọi trực tiếp UI |
 | AI | Heuristic chọn một lệnh hợp lệ và mục tiêu; chỉ đọc thông tin được luật cho phép | Đọc trước thẻ nếu không có Passive; gian lận tiền/xúc xắc |
 | UI | Input, popup, HUD và binding tiếng Việt; gửi lựa chọn theo yêu cầu domain | Tự tính lại giá bằng công thức khác; ghi trực tiếp runtime state |
 

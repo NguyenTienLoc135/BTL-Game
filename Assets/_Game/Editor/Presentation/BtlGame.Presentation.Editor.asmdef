@@ -2,7 +2,7 @@
   "name": "BtlGame.Presentation.Editor",
   "rootNamespace": "BTLGame.EditorTools",
   "references": [
-    "BtlGame.UI",
+    "BtlGame.Presentation",
     "BtlGame.Gameplay",
     "UnityEngine.UI",
     "Unity.InputSystem"

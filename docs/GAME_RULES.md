@@ -232,7 +232,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Cúp điện **hủy ngay** khi TP đổi chủ hoặc nâng thành Khách sạn; **tung đôi thêm không tạo lượt mới** để đếm hiệu lực.
 - **Q17:** nguồn tạo effect phá sản thì giữ effect qua vòng đang dở; nếu còn **N lượt riêng** đến hạn, chuyển thành **N vòng chung mới hoàn chỉnh tiếp theo**, không đếm vòng dở. Quy tắc hủy do đổi chủ/Hotel vẫn ưu tiên. Lễ hội tổ chức không có hạn lượt và vẫn mất theo Q15 khi tài sản đổi chủ.
 - Thẻ chuyển tiền áp dụng nghĩa vụ bắt buộc; người nhận chỉ lấy **số dư thực còn lại** khi bên trả đã thanh lý hết mà vẫn phá sản.
-- Nhà Chiến Lược Passive xem trước **thẻ tiếp theo** trong trình tự rút; logic rút thẻ cần cung cấp thông tin nhất quán nhưng **báo cáo không quy định thuật toán shuffle/rút lại**, không tự tuyên bố một kiểu deck là luật bắt buộc.
+- Nhà Chiến Lược Passive xem trước **thẻ tiếp theo** trong trình tự rút; logic rút thẻ cần cung cấp thông tin nhất quán nhưng **Q02 được người dùng duyệt ngày2026-11-19:** mỗi lần chọn ngẫu nhiên đều trong14 loại (1/14 mỗi loại), có hoàn lại nên có thể gặp lại ngay; không có bộ hữu hạn/hết bài. Thẻ giữ trùng bỏ lá mới; preview là đúng lá kế tiếp, không bốc lại khi xem.
 
 ## 9. Sáu nghề nghiệp — Passive, Active, Ultimate, Weakness
 
@@ -328,9 +328,9 @@ Sau giao dịch hoặc thay đổi quyền sở hữu, kiểm tra điều kiện
 
 Các câu trả lời mới ngày2026-11-17 trong DECISIONS đã giải quyết Q03/Q10/Q12/Q14/Q15/Q16/Q17/Q19, P01/P02 và hai chi tiết kỹ năng. Không tiếp tục chặn những nhánh ấy bằng câu hỏi cũ hoặc áp Word để phủ quyết luật mới.
 
-- **Q02 còn PENDING:** phân phối/số bản sao, shuffle, lá bỏ/rút trùng đi đâu, hết bài tái tạo thế nào và preview khi tái tạo. C cung cấp production deck/provider sau khi chốt; fixture cấp thẻ xác định không phải luật xác suất sản phẩm.
+- **Q02 APPROVED — 2026-11-19:** ngẫu nhiên đều14 loại mỗi lần, có hoàn lại; không có chồng bài bỏ hoặc tái tạo bộ. Thẻ giữ trùng bỏ lá mới; Strategist xem đúng lá đã xác định cho lần tiếp theo. Fixture cấp thẻ xác định chỉ phục vụ test.
 - Q01 giữ truy vết việc xác định Word; file hiện có, không yêu cầu người dùng thêm lại. Q07/Q18 giữ truy vết nhưng các ca biển/modifier và quà trong lượt miễn đã có oracle từ Word; không hỏi lại.
 - Điều kiện vòng dựa trên người chưa phá sản đã rõ; biểu diễn tập chờ Q08 và tên API/DTO vẫn là chi tiết kỹ thuật để các bên rà soát, không phải luật gameplay mới.
 - A01–A06 là đề xuất kỹ thuật; code đã triển khai không tự chứng minh cả nhóm đã phê duyệt API hoặc tích hợp Scene xong. Không đổi trạng thái mọi test đặc tả thành PASS theo một lần chạy domain.
 
-Agent được đề xuất kỹ thuật có lý do, nhưng không tự phê duyệt chính sách Q02 hoặc tính năng ngoài phạm vi. Nếu phát hiện trường hợp luật chưa có nguồn, báo tình huống và hỏi người dùng trước khi triển khai nhánh đó; phần độc lập vẫn tiếp tục.
+Agent được đề xuất kỹ thuật có lý do; áp dụng Q02 đã duyệt, không tự bổ sung chính sách hoặc tính năng ngoài phạm vi. Nếu phát hiện trường hợp luật chưa có nguồn, báo tình huống và hỏi người dùng trước khi triển khai nhánh đó; phần độc lập vẫn tiếp tục.

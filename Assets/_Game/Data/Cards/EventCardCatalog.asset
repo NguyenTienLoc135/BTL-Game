@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 61dfa0db98ada9c4197985b86ee6056a, type: 3}
+  m_Name: EventCardCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::BTLGame.Cards.EventCardCatalog
+  _cards:
+  - {fileID: 11400000, guid: b28a34993ed3bbc4b82d51917b97fa82, type: 2}
+  - {fileID: 11400000, guid: 98faaad01d67e4043800066ec6e80e6c, type: 2}
+  - {fileID: 11400000, guid: bb57825986d20d140a88f50b97b8a2f4, type: 2}
+  - {fileID: 11400000, guid: 76c975985573b2c4e9f286da744bf044, type: 2}
+  - {fileID: 11400000, guid: a7cb0aa657a3b3d428335f5a7919065e, type: 2}
+  - {fileID: 11400000, guid: c3a14a54e34a0074aae8f7179f79bd73, type: 2}
+  - {fileID: 11400000, guid: 1951872d89d94df4c89a7edce6a21683, type: 2}
+  - {fileID: 11400000, guid: 0d3876cfcf832fa48a3afe89903dfc78, type: 2}
+  - {fileID: 11400000, guid: aa96dc13c8e5fd94bab360fc2449d878, type: 2}
+  - {fileID: 11400000, guid: 0979de140e836ed4e8238bd7e4ba3736, type: 2}
+  - {fileID: 11400000, guid: db0880eccacde3946b7b82d5dc9824ff, type: 2}
+  - {fileID: 11400000, guid: fe517d55079085d43968761649daeaf1, type: 2}
+  - {fileID: 11400000, guid: f3328e7280fcfce48bfa8ff66195e296, type: 2}
+  - {fileID: 11400000, guid: 9a71516da5aa78a45912d38ea76e12ed, type: 2}

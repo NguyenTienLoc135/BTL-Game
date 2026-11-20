@@ -1,6 +1,6 @@
 # Quyết định và câu hỏi chưa xác nhận
 
-Cập nhật: **2026-11-17**. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Tài liệu này ghi luật/quyết định, không chứng minh mọi implementation hoặc test đặc tả đã hoàn tất.
+Cập nhật: **2026-11-19**. Tách rõ **APPROVED bởi người dùng**, **luật Word còn hiệu lực**, **đề xuất kỹ thuật** và **OPEN/PENDING**. Tài liệu này ghi luật/quyết định, không chứng minh mọi implementation hoặc test đặc tả đã hoàn tất.
 
 ## 1. Nguồn thực tế và thứ tự ưu tiên
 
@@ -44,10 +44,11 @@ Người phê duyệt: **người dùng giao việc trong chat dự án**; luậ
 | JAIL-REROLL | APPROVED — 2026-11-17 | Strategist được gieo lại hai xúc xắc thử ra tù trước chốt; chỉ kết quả cuối quyết định thoát/phí/di chuyển, phải chấp nhận kết quả mới. |
 | ENTREPRENEUR-FORCE | APPROVED — 2026-11-17 | Điểm yếu Doanh Nhân+5% chỉ mua từ ngân hàng; cưỡng chế thường vẫn200%, không205%/210%. |
 | START-200K | APPROVED — 17/11/2026 | Mỗi lần đi qua hoặc dừng đúng ô Xuất phát trong hành trình hợp lệ thưởng 200.000đ, kể cả khi dịch chuyển. Chỉ thưởng một lần cho mỗi lần vượt mốc ô 0. Phí dịch chuyển ô 24 vẫn là 100.000đ. Các khoản tiền khác giữ nguyên. |
+| Q02 | APPROVED — 19/11/2026 | Người dùng chọn “Ngẫu nhiên đều 14 loại mỗi lần (đề xuất)” khi tích hợp A/B/C/D: xác suất1/14 mỗi loại, có hoàn lại nên có thể lặp ngay. Thẻ giữ trùng bỏ lá mới. Strategist xem đúng lá đã xác định cho lần rút tiếp theo; query không bốc lại hoặc tiến ordinal. Không có chồng bài hữu hạn/hết bộ. |
 
 Nguồn F02: yêu cầu của người dùng ngày2026-11-14: “nhiệm vụ A là của hoàng lộc và nhiệm vụ B là của mạnh”. F02 thay phần người phụ trách A/B của F01, không phê duyệt thêm kiến trúc hoặc thay luật gameplay.
 
-Nguồn bổ sung ngày2026-11-17: các câu trả lời trực tiếp của người dùng cho các vấn đề còn thiếu và các follow-up về lễ hội, di chuyển, Setup, kỹ năng và hiệu ứng. Nội dung ở bảng là diễn giải phạm vi câu trả lời; không lấy đề xuất agent làm bằng chứng. Người dùng xác nhận Q17: “Người trả tự chọn thứ tự tài sản; AI tự chọn qua cùng API (đề xuất)” và “Giữ qua vòng đang dở; đếm số vòng mới kế tiếp bằng số lượt còn lại (đề xuất)”. Q02 về deck/shuffle/rút lại **chưa được phê duyệt**.
+Nguồn bổ sung ngày2026-11-17: các câu trả lời trực tiếp của người dùng cho các vấn đề còn thiếu và các follow-up về lễ hội, di chuyển, Setup, kỹ năng và hiệu ứng. Nội dung ở bảng là diễn giải phạm vi câu trả lời; không lấy đề xuất agent làm bằng chứng. Người dùng xác nhận Q17: “Người trả tự chọn thứ tự tài sản; AI tự chọn qua cùng API (đề xuất)” và “Giữ qua vòng đang dở; đếm số vòng mới kế tiếp bằng số lượt còn lại (đề xuất)”. Q02 được người dùng phê duyệt bổ sung ngày2026-11-19 theo bảng truy vết bên dưới.
 
 ## 3. Khác biệt với Word và cách áp dụng
 
@@ -103,7 +104,7 @@ Cột câu hỏi giữ nguyên văn để đối chiếu lịch sử. Các câu 
 | ID | Trạng thái | Câu hỏi gốc | Phạm vi hiện tại |
 |---|---|---|---|
 | Q01 | PENDING | Bản Word đã chốt nào cần đối chiếu? Nếu có khác biệt, nhóm xác nhận cách cập nhật nguồn nào? | Word hiện có tại docs/references/GAME_DESIGN_DOCUMENT.docx và đã đọc; không cần người dùng tìm/thêm lại. PENDING chỉ giữ truy vết câu hỏi cũ, không là phê duyệt gameplay. |
-| Q02 | PENDING | Có bộ hữu hạn hay rút theo bảng xác suất? Bỏ thẻ/rút trùng đi đâu? Khi hết bài xử lý thế nào? Preview có thay đổi khi thẻ bị giữ/bỏ? | PENDING: phân phối, số bản sao, bỏ/rút lại thẻ; seed là chi tiết kỹ thuật đề xuất, không tự biến thành luật xác suất. |
+| Q02 | APPROVED — 2026-11-19 | Có bộ hữu hạn hay rút theo bảng xác suất? Bỏ thẻ/rút trùng đi đâu? Khi hết bài xử lý thế nào? Preview có thay đổi khi thẻ bị giữ/bỏ? | Người dùng chọn “Ngẫu nhiên đều 14 loại mỗi lần”: xác suất1/14, có hoàn lại nên có thể gặp lại ngay; không có chồng bài hữu hạn/hết bài. Thẻ giữ trùng thì bỏ lá mới, không xóa lá cũ. Strategist nhìn đúng lá đã xác định cho lần rút kế tiếp; query không bốc lại hoặc tiến ordinal. |
 | Q03 | APPROVED — 2026-11-17 | Số người tối thiểu? Có trùng nghề? Chọn người đầu và thứ tự lượt bằng cách nào? | 2–4 người, được trùng nghề; người đầu ngẫu nhiên rồi thứ tự ghế cố định, bỏ qua người phá sản. |
 | Q04 | APPROVED | Active/Ultimate dùng ở pha nào? Lawyer Active có được phản ứng khi ngoài lượt? Khi nào được bán tự nguyện? Strategist Ultimate thay gieo hay thêm di chuyển; sau đó còn gieo/đôi không? | APPROVED=A: điểm dừng trước gieo/sau hoàn tất ô; không giữa animation/giao dịch; Lawyer phản ứng trước thuê của chính mình; bán tự nguyện ở điểm hợp lệ; thanh lý bắt buộc cả ngoài lượt; Strategist Ultimate thay một quyền gieo, không tạo đôi. |
 | Q05 | APPROVED | Ultimate nhân đôi bắt đầu/kết thúc đúng mốc nào? Có phủ lượt đối thủ xen giữa không? | APPROVED=A: RentDouble có hiệu lực ngay, phủ đối thủ, hết ngay trước lượt riêng kế tiếp của chủ; không dùng phương án B từng được agent đề xuất. |
@@ -129,7 +130,7 @@ Cột câu hỏi giữ nguyên văn để đối chiếu lịch sử. Các câu 
 |---|---|---|---|
 | P01 | APPROVED — 2026-11-17 | Phần lẻ bằng nhau ưu tiên Cọc→Nhà1→Nhà2→Nhà3→Hotel |103 theo40:20:20:20 → [41,21,21,20,0], tổng103 |
 | P02 | APPROVED — 2026-11-17 | Lawyer Ultimate miễn phí tù bắt buộc200.000 và thả cuối lượt, không di chuyển thêm | Không trừ tiền, không mở gieo mới; nợ Banker vẫn phải trả |
-| Q02 | PENDING | Chưa chốt phân phối/số bản sao, shuffle, bỏ/rút lại và preview khi hết/tái tạo deck | Cần quyết định trước production deck; không coi fixture/provider test là luật sản phẩm |
+| Q02 | APPROVED — 2026-11-19 | Mỗi lần rút ngẫu nhiên đều14 loại, có hoàn lại; bỏ lá giữ trùng; preview cố định cho lần kế tiếp | Người dùng chọn phương án này trực tiếp trong chat tích hợp. Không có hết bộ hoặc shuffle bộ hữu hạn; fixture không là luật sản phẩm |
 
 Q01/Q07/Q08/Q18 giữ truy vết lịch sử hoặc phần hợp đồng kỹ thuật, không dùng để hỏi lại luật đã rõ. Q03/Q10/Q12/Q14/Q15/Q16/Q17/Q19 và P01/P02 không còn chặn vì thiếu câu trả lời cũ. A01–A06 vẫn ĐỀ XUẤT, chưa có bằng chứng cả nhóm chấp thuận API; implementation và test code không tự phê duyệt kiến trúc. Không tạo online/Save/Load/shop.
 ## 8. Cách ghi quyết định tiếp theo
