@@ -9,7 +9,7 @@ public class EventCardPopup : MonoBehaviour
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private Button actionButton;
 
-    // Hàm hiển thị popup với tiêu đề và nội dung tùy chỉnh
+    // Hàm hiển thị popup với tiêu đề và nội dung tùy chinh
     public void ShowPopup(string title, string description)
     {
         gameObject.SetActive(true);
@@ -30,6 +30,7 @@ public class EventCardPopup : MonoBehaviour
         {
             actionButton.onClick.AddListener(HidePopup);
         }
+ 
     }
     
 }
