@@ -18,6 +18,7 @@ namespace BtlGame.Core
     {
         private static MatchSetupRequest _nextSetup;
         private static MatchSetupRequest _lastSetup;   // cấu hình trận đang/đã chơi, dùng cho "Chơi lại"
+        private const float AutomaticEndTurnDelaySeconds = 0.75f;
         private IMatchResultUi _resultUi;
         private MainMenuSetupController _menu;
         private IGameplayUi _ui;
@@ -28,6 +29,7 @@ namespace BtlGame.Core
         private long _nextPopupId;
         private bool _resultShown;
         private float _nextAiAt;
+        private float _endTurnAt;
         private bool _localChoicePaused;
         public MatchCoordinator Match { get; private set; }
 
@@ -36,7 +38,7 @@ namespace BtlGame.Core
 
         private void Start()
         {
-            _menu = FindFirstObjectByType<MainMenuSetupController>();
+            _menu = FindAnyObjectByType<MainMenuSetupController>();
             if (_menu != null)
             {
                 _menu.ConfigureOptions(SetupDecisions.Approved.MinimumPlayers, 4,
@@ -44,7 +46,7 @@ namespace BtlGame.Core
                 _menu.SetupRequested += BeginMatch;
                 return;
             }
-            _board = FindFirstObjectByType<BoardView>();
+            _board = FindAnyObjectByType<BoardView>();
             _ui = FindGameplayUi();
             if (_board == null || _ui == null) throw new InvalidOperationException("Gameplay thiếu BoardView hoặc IGameplayUi (GameplayUIController/PresentationGameplayUi).");
             if (_nextSetup == null)
@@ -74,7 +76,7 @@ namespace BtlGame.Core
 
         private static IMatchResultUi FindResultUi()
         {
-            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
                 if (behaviour is IMatchResultUi ui) return ui;
             return null;
         }
@@ -92,7 +94,7 @@ namespace BtlGame.Core
         private static IGameplayUi FindGameplayUi()
         {
             // Giao diện nào cài IGameplayUi đều dùng được (GameplayUIController của Codex hoặc PresentationGameplayUi).
-            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include))
                 if (behaviour is IGameplayUi ui) return ui;
             return null;
         }
@@ -156,6 +158,8 @@ namespace BtlGame.Core
             snapshot = Match.QuerySnapshot();
             if (snapshot.Status == MatchStatus.Finished) { Refresh(); return; }
             if (snapshot.Phase == TurnPhase.Moving || _popupId != 0) { RenderHud(snapshot); return; }
+            if (snapshot.Phase != TurnPhase.EndTurn) _endTurnAt = 0f;
+            else if (TryAutoCompleteHumanTurn(snapshot)) return;
             int actor = DecisionActor(snapshot);
             if (_ais.TryGetValue(actor, out AiController ai))
             {
@@ -174,6 +178,21 @@ namespace BtlGame.Core
                 snapshot.Phase == TurnPhase.AwaitingJailChoice)
                 ShowOptions(Match.QueryLegalActions(actor));
             RenderHud(Match.QuerySnapshot());
+        }
+
+        private bool TryAutoCompleteHumanTurn(GameSnapshot snapshot)
+        {
+            PlayerSnapshot player = snapshot.Players.First(p => p.Id == snapshot.CurrentPlayerId);
+            if (player.Controller != ControllerKind.Human) return false;
+            if (_endTurnAt <= 0f) _endTurnAt = Time.unscaledTime + AutomaticEndTurnDelaySeconds;
+            if (Time.unscaledTime < _endTurnAt) return false;
+
+            LegalAction endTurn = Match.QueryLegalActions(player.Id)
+                .FirstOrDefault(action => action.Kind == GameActionKind.EndTurn);
+            if (endTurn == null) return false;
+            _endTurnAt = 0f;
+            HandleResult(Match.SubmitAction(endTurn.ToCommand()));
+            return true;
         }
 
         private const float RollRevealSeconds = 1.8f;
@@ -241,8 +260,14 @@ namespace BtlGame.Core
                 BoardCatalog.Get(p.TileId).Name + " — " + (p.Level?.ToString() ?? "Bãi biển")));
             var status = new List<string> { "Ô " + player.Position + ": " + BoardCatalog.Get(player.Position).Name,
                 "Hồi chiêu: " + Math.Max(0, player.ActiveReadyAfterCompletedTurns - player.CompletedPersonalTurns) +
-                " lượt; Ultimate: " + (player.UltimateUsed ? "đã dùng" : "còn"),
-                "Thẻ giữ: " + string.Join(", ", player.HeldCards) };
+                " lượt; Ultimate: " + (player.UltimateUsed ? "đã dùng" : "còn") };
+            status.AddRange(DescribeHeldCards(player.HeldCards));
+            RoleDefinition role = RoleCatalog.Get(player.Role);
+            status.Add("Passive: " + role.PassiveDescription);
+            status.Add("Active: " + role.ActiveDescription +
+                " (Hồi " + role.ActiveCooldownTurns + " lượt riêng)");
+            status.Add("Ultimate: " + role.UltimateDescription);
+            status.Add("Điểm yếu: " + role.WeaknessDescription);
             if (player.IsJailed) status.Add("Đang ở tù — lượt " + player.JailTurnsStarted + "/3");
             int? preview = Match.QueryNextCard(actor);
             if (preview.HasValue) status.Add("Thẻ kế tiếp: " + preview.Value);
@@ -269,6 +294,33 @@ namespace BtlGame.Core
         private static string Money(long amount) => amount.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")) + "đ";
         private static bool IsSkill(LegalAction a) => a.Kind == GameActionKind.ActivateSkill ||
             a.Kind == GameActionKind.UseUltimate || a.Kind == GameActionKind.RerollDice;
+        internal static IReadOnlyList<string> DescribeHeldCards(IReadOnlyCollection<int> heldCardIds)
+        {
+            if (heldCardIds == null || heldCardIds.Count == 0)
+                return new[] { "Thẻ đang giữ: Không có" };
+
+            var details = new List<string> { "Thẻ đang giữ:" };
+            foreach (int cardId in new[] { 3, 4, 5, 8 })
+            {
+                if (!heldCardIds.Contains(cardId)) continue;
+                switch (cardId)
+                {
+                    case 3:
+                        details.Add("• Miễn thuế — dùng chủ động để miễn một lần chịu thuế.");
+                        break;
+                    case 4:
+                        details.Add("• Giảm tiền thuê — dùng chủ động để giảm 50% một nghĩa vụ thuê.");
+                        break;
+                    case 5:
+                        details.Add("• Bảo vệ công trình — tự chặn một tác động phá hoại hợp lệ.");
+                        break;
+                    case 8:
+                        details.Add("• Ra tù — dùng để ra khỏi tù.");
+                        break;
+                }
+            }
+            return details.AsReadOnly();
+        }
 
         private void OnHudAction(GameplayUiAction request)
         {
@@ -312,7 +364,14 @@ namespace BtlGame.Core
             string message = player.DisplayName + " — " + RoleCatalog.Get(player.Role).DisplayName + "\nTiền mặt: " + Money(player.Cash);
             ObligationSnapshot obligation = snapshot.PendingObligations.FirstOrDefault(o => o.PayerId == actor);
             if (obligation != null) message += "\nPhải trả: " + Money(obligation.PayableAmount) + " (" + obligation.Kind + ")";
-            if (localSelection) message += "\n" + RoleCatalog.Get(player.Role).ActiveDescription + "\n" + RoleCatalog.Get(player.Role).UltimateDescription;
+            if (localSelection)
+            {
+                RoleDefinition role = RoleCatalog.Get(player.Role);
+                message += "\n\nPassive: " + role.PassiveDescription +
+                    "\nActive: " + role.ActiveDescription + " (Hồi " + role.ActiveCooldownTurns + " lượt riêng)" +
+                    "\nUltimate: " + role.UltimateDescription +
+                    "\nĐiểm yếu: " + role.WeaknessDescription;
+            }
             var prompt = new DecisionPrompt(_popupId, actor, snapshot.Revision, kind, "Chọn hành động", message,
                 options, snapshot.CurrentActionId, snapshot.PendingCardId?.ToString());
             if (card) _ui.ShowCard((EventCardId)snapshot.PendingCardId.Value, prompt);
@@ -347,6 +406,7 @@ namespace BtlGame.Core
 
         private void HandleResult(ActionResult result)
         {
+            _endTurnAt = 0f;
             if (result.Status == ActionStatus.Rejected) Debug.LogWarning(result.Message, this);
             if (result.Movement != null)
             {
