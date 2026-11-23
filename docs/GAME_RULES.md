@@ -3,12 +3,14 @@
 > **Nguồn ưu tiên:** quyết định mới người dùng phê duyệt → [Word gốc](references/GAME_DESIGN_DOCUMENT.docx) đối với phần không bị thay đổi → tài liệu này → tài liệu kỹ thuật. Word trước đây được nhắc bằng tên `Bao_cao_Co_Ty_Phu_RPG_Giu_Nguyen_Muc_Luc_Goc(2).docx`. Ngày 2026-11-06 người dùng phê duyệt Q04=A, Q05=A, Q06=A, Q09=A, Q11=A, Q13=A, Q20=B và giới hạn tù 3 lượt. Ngoại lệ mới được ghi trong [DECISIONS](DECISIONS.md); **không sửa Word gốc**.
 >
 > **Trạng thái:** Đặc tả nội dung đã chốt, **không phải** bằng chứng đã lập trình hoặc test xong. Đơn vị tiền tệ là **đồng (VND) mô phỏng trong game**.
+>
+> **Bổ sung được người dùng phê duyệt ngày2026-11-17:** Q03/Q10/Q12/Q14/Q15/Q16/Q17/Q19, P01/P02, Strategist gieo lại thử ra tù và Doanh Nhân cưỡng chế200%. Luật lễ hội tự tổ chức mới trong §4.2/§7.4/§8 **thay** thời hạn2 lượt cũ trong Word; ba lễ hội cố định vẫn giữ. Nguồn và lịch sử tại DECISIONS; không sửa Word đã nộp.
 
 ## 1. Giới hạn sản phẩm và luồng chơi
 
 - Unity **6.6 (6000.6.4f1)** + C#, **URP**, low-poly 3D, góc camera từ trên xuống nhìn chéo cố định, UI 2D. Điều khiển bằng chuột/nút.
 - Board game chiến thuật theo lượt, tài chính/bất động sản kèm kỹ năng RPG nhẹ. Bàn cờ **32 ô**, **20 thành phố thuộc 8 quốc gia**, **4 bãi biển**, **8 ô chức năng**.
-- Tối đa **4 người** (AI và/hoặc người cùng dùng một máy); có chế độ đấu AI và chế độ nhiều người lần lượt trên **cùng thiết bị**. Không có online/multiplayer network/account.
+- **2–4 người**, cho phép **trùng nghề**; chọn **ngẫu nhiên người đầu**, sau đó giữ **thứ tự ghế cố định** và bỏ qua người phá sản. Có AI và/hoặc người cùng dùng một máy; không online/multiplayer network/account.
 - Chọn đồng hồ **30 / 45 / 60 phút / vô hạn** trước khi bắt đầu; cả hai chế độ đều dùng các tùy chọn này.
 - Mỗi người chọn 1 trong 6 nghề nghiệp. Khi bắt đầu, mỗi người có **300.000**, ở ô **0**; xác định ngẫu nhiên **3 thành phố lễ hội cố định** xuyên suốt trận.
 - Game flow: MainMenu → chọn chế độ và thời gian, số người → chọn nghề nghiệp → tạo trận → tới lượt chọn kỹ năng hợp lệ, gieo hai xúc xắc, di chuyển, xử lý ô/tài sản/thẻ → kiểm tra thắng → người/AI kế tiếp → kết thúc.
@@ -21,7 +23,7 @@
 - Sử dụng **hai xúc xắc 6 mặt**. Tổng điểm di chuyển về phía tăng chỉ số ô, quấn vòng ở 31 → 0.
 - **Tung đôi:** được tung tiếp **không giới hạn** sau khi giải quyết xong ô đến. Tất cả lần tung thêm nằm trong **cùng lượt riêng**, không làm chạy cooldown, đếm lại thời hạn hiệu ứng hay sinh vòng chung mới.
 - **Q11 đã duyệt:** nếu tung đôi rồi dừng ô8 hoặc rút Vào tù thì vào trạng thái giam, **hủy quyền gieo thêm và kết thúc lượt ngay**; vẫn phải xử lý các mốc cuối lượt cần thiết. Không đổi luật tung đôi để ra tù ở §7.2.
-- Đi ngang hoặc dừng đúng ô xuất phát theo đường di chuyển hợp lệ nhận **100.000 mỗi lần qua ô 0**; không nhận hai lần cho cùng một lần vượt mốc.
+- Đi qua hoặc dừng đúng ô Xuất phát trong hành trình hợp lệ nhận **200.000 mỗi lần**, kể cả khi dịch chuyển. Một lần đến ô 0 chỉ được tính một lần thưởng, kể cả khi ô 0 là điểm dừng.
 - **Q20 đã duyệt:** đồng hồ hữu hạn tạm dừng khi chờ quyết định trong popup cho cả **Human và AI**. Hết giờ ghi nhận yêu cầu kết thúc; hoàn tất **toàn bộ lần dừng đang xử lý và hiệu ứng/giao dịch phát sinh trực tiếp**, gồm lựa chọn mua/bỏ qua, cưỡng chế, dịch chuyển, lễ hội và chuỗi liên quan. Không mở lần gieo mới, kể cả đôi; không bắt đầu kỹ năng chủ động mới không liên quan đến chuỗi đang xử lý. Không cắt bỏ phản ứng hợp lệ trực tiếp thuộc nghĩa vụ đang giải quyết.
 - Sau khi hoàn tất chuỗi, xử lý mốc cuối lượt theo thứ tự dưới đây rồi mới xác định kết quả hết giờ; thắng tức thời trong chuỗi kết thúc trận ngay.
 - Cuối thời gian nếu chưa có thắng tức thời: so **tiền mặt** của người còn chơi → hòa thì so **tổng giá niêm yết hiện tại của bất động sản** → vẫn hòa thì **đồng thắng**.
@@ -43,7 +45,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 
 | Ô | Loại | Tên / quốc gia / mã hoặc chức năng | Giá Nhà 3 tham chiếu (đ) |
 |---:|---|---|---:|
-| 0 | Xuất phát | Qua/dừng ô 0: +100.000 theo luật | — |
+| 0 | Xuất phát | Qua/dừng ô 0: +200.000 theo luật | — |
 | 1 | Thành phố | Hà Nội — Việt Nam — TP1 | 100.000 |
 | 2 | Thành phố | Đà Nẵng — Việt Nam — TP2 | 120.000 |
 | 3 | Thành phố | TP. Hồ Chí Minh — Việt Nam — TP3 | 140.000 |
@@ -111,7 +113,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Khi dẫm TP **chưa có chủ**, có thể mua ngay **Cọc / Nhà1 / Nhà2 / Nhà3** (hoặc bỏ qua), không thể mua trực tiếp Khách sạn.
 - Khi dẫm TP **của mình**, được chọn **một thao tác nâng cấp thường** lên cấp cao hơn, tối đa Nhà 3, với **chênh lệch giá các cấp**, có xét chi phí kỹ năng/điểm yếu nếu áp dụng. Không nâng khi không đủ tiền; không hạ cấp tự nguyện.
 - Một lần dừng chỉ có **một quyết định nâng cấp thường**; tách thành nhiều lệnh/nút bấm không cho phép Nhà1→Nhà2 rồi Nhà2→Nhà3 trong cùng lần dừng. Kỹ năng vẫn có điều kiện riêng.
-- **Nhà3 → Khách sạn** chỉ được nâng trong **một lần dừng sau đó** trên TP mình sở hữu khi đã Nhà3. **Không** được hoàn thành Khách sạn trong cùng lần đến mua đầu tiên. Kỹ năng Kỹ Sư có ngoại lệ nâng từ xa theo đúng mô tả ở mục 9.
+- **Nâng thường Nhà3 → Khách sạn** chỉ được thực hiện trong **lần dừng sau đó** trên TP mình sở hữu khi đã Nhà3; không nâng thường Hotel trong cùng lần mua đầu tiên. **Q12 đã duyệt:** Active/Ultimate Kỹ Sư được nâng Hotel ngay trong cùng lần đến, sau khi ô/giao dịch đã hoàn tất và tại cửa sổ kỹ năng hợp lệ; không đổi quy tắc chờ của nâng thường.
 - Khách sạn miễn nhiễm với **mua cưỡng chế, Động đất, Phá tài sản, Cúp điện**, nhưng **có thể bán cho ngân hàng** hoặc bị thu hồi khi chủ phá sản.
 
 ### 4.2. Tiền thuê TP, lễ hội và độc quyền
@@ -119,7 +121,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 1. Tiền thuê gốc TP = `giá Nhà 3 × 5% × hệ số của cấp`; **không làm tròn ở các bước trung gian**.
 2. Thưởng **độc quyền đất nước +20% thuê** trên các TP thuộc nước độc quyền đó.
 3. **Đầu trận chọn ngẫu nhiên 3 TP khác nhau** làm lễ hội cố định, **+50% thuê** cho cả trận.
-4. Ô 16 hoặc thẻ lễ hội: người chơi có thể trả **200.000** chọn **một TP mình sở hữu** để **+50% thuê trong hai lượt riêng tiếp theo**. Không chọn biển; **không có hai hiệu ứng lễ hội tạm cùng lúc trên một TP**. Phân biệt đúng vòng đời hiệu ứng tính theo **lượt riêng của người dùng**.
+4. **Q14 mới đã duyệt, thay thời hạn2 lượt trong Word:** ô16 và thẻ12 dùng chung **một lễ hội tự tổ chức trên toàn trận**, tách khỏi ba TP lễ hội cố định. Mỗi lần trả **200.000**, chọn một **TP mình sở hữu**, không chọn biển. Cùng chủ tiếp tục tổ chức trên cùng TP thì cộng thêm **50% thuê gốc** mỗi lần: +50%, +100%, +150%...; **không hết hạn theo lượt**. Chọn TP khác, hoặc một người khác tổ chức, thì hủy toàn bộ mức cộng dồn tổ chức cũ và tạo lễ hội mới ở mức+50%. Thành phố đổi chủ, bán/phá hoặc trả về ngân hàng khi phá sản thì xóa lễ hội tổ chức theo Q15. Các lễ hội cố định đầu trận không bị thay thế/xóa bởi thao tác này.
 5. Các phần trăm tăng/giảm được **cộng đại số trên tiền thuê gốc**, không nhân tuần tự mỗi buff. Sau đó mới áp dụng hiệu ứng **nhân đôi** (Ultimate Doanh Nhân), làm tròn xuống **đơn vị đồng ở kết quả cuối**.
 6. Khi tòa nhà chịu **Cúp điện** hợp lệ, chủ **không được thu tiền thuê** ở TP đó đến khi hết hạn hoặc hủy hiệu ứng theo luật.
 7. Các Passive/Active có thể ảnh hưởng tiền thuê cần xem mục 9, tránh cộng trùng.
@@ -140,6 +142,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Dẫm vào **TP đối thủ Cọc / Nhà1 / Nhà2 / Nhà3**: phải **trả tiền thuê trước**, sau đó **có thể** chọn cưỡng chế nếu đủ tiền.
 - Giá mua cưỡng chế thông thường = **200% giá niêm yết của cấp hiện tại**; trả cho chủ cũ, chủ cũ không được từ chối.
 - Ultimate Nhà Đầu Tư = **mua từ xa** TP đối thủ chưa là Khách sạn với giá **150% giá niêm yết hiện tại**, **không phát sinh tiền thuê**.
+- Doanh Nhân cưỡng chế thông thường vẫn đúng **200%**, không cộng điểm yếu+5%; phụ phí ấy chỉ áp dụng mua chưa chủ từ ngân hàng.
 - Không có cưỡng chế mua **Khách sạn hoặc biển**. Không có cơ chế mua bán tự do giữa người chơi.
 - Khi đổi chủ TP giữ nguyên **cấp hiện tại**; **sổ vốn của chủ mới** bắt đầu từ **giá cưỡng chế thực trả** (phân bổ theo bậc), **không kế thừa vốn của chủ cũ**. Tiền thuê không cộng vào vốn.
 
@@ -158,7 +161,7 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Không dùng float biểu diễn tiền; tính tỷ lệ chính xác bằng số nguyên/phân số.
 - Những phép tính tiền chưa có quy tắc riêng được **làm tròn xuống đồng nguyên ở kết quả thanh toán cuối cùng**. Thuê và lãi Banker giữ floor theo Word; không làm tròn các bước trung gian.
 - Phân bổ khoản vốn thực trả theo tỷ trọng các bậc: lấy phần nguyên của mỗi phần, phân phối đồng dư theo **phần lẻ lớn nhất**, dùng **thứ tự bậc cố định để phá hòa**. Tổng vốn phải bằng đúng số thực trả, không mất đồng vì làm tròn.
-- Prompt chưa chỉ rõ hướng của thứ tự phá hòa; chi tiết đó còn PENDING P01 trong DECISIONS. Không tự coi một hướng sắp xếp là đã được duyệt.
+- **P01 đã duyệt:** khi phần lẻ bằng nhau, ưu tiên từ bậc thấp lên cao: **Cọc → Nhà1 → Nhà2 → Nhà3 → Khách sạn**. Ví dụ103 theo40:20:20:20 phân bổ **[41,21,21,20,0]**.
 - Nâng miễn phí không chia lại vốn cũ; Động đất chỉ xóa vốn bậc mất.
 
 ### 6.3. Thanh toán và phá sản
@@ -168,7 +171,9 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Khi phá sản: **mọi tài sản còn lại**, gồm khách sạn và biển, **trở về ngân hàng chưa có chủ**; người chơi bị loại khỏi trận.
 - Phí/tùy chọn **mua đất, nâng cấp, dịch chuyển, lễ hội** chỉ thực hiện khi đủ tiền; **không bắt buộc thanh lý để mua dịch vụ**.
 - **Q06 đã duyệt:** áp dụng hiệu ứng đã có sẵn trước. Nếu nghĩa vụ bằng0 thì không cho tiêu thêm thẻ/kỹ năng. Nếu còn dương, người chơi chọn trả thường hoặc tối đa **một biện pháp miễn/giảm chủ động** phù hợp cho nghĩa vụ đó. Giữ công thức thuê và quy tắc tự động Bảo vệ; không tự kích hoạt một kỹ năng mới ngoài cửa sổ hợp lệ.
-- Khoản **200.000 bắt buộc ra tù sau lần tung thất bại ở lượt tù thứ3** là nghĩa vụ bắt buộc mới, phải cho thanh lý trước phá sản. Tương tác miễn khoản này và điều kiện thả sau miễn còn PENDING P02, không tự thêm ngoại lệ.
+- Khoản **200.000 bắt buộc ra tù sau lần tung thất bại ở lượt tù thứ3** phải cho thanh lý trước phá sản. **P02 đã duyệt:** Lawyer Ultimate đang có hiệu lực được miễn khoản này và **thả cuối lượt**, không di chuyển/gieo thêm; tới lượt riêng kế tiếp mới đi bình thường. Nợ Banker vẫn không được miễn.
+- **Q17 đã duyệt:** người trả chọn thứ tự tài sản thanh lý; AI chọn qua cùng API hợp lệ. Không được tự nhận phá sản khi vẫn còn khả năng thanh lý để trả nghĩa vụ.
+- **Q19 đã duyệt:** nghĩa vụ từ thẻ10 được tạo đồng thời cho mọi đối thủ còn chơi; người đủ tiền tự trả ngay, mọi người thiếu cùng có nghĩa vụ chờ thanh lý/phá sản. Người rút chờ batch được giải quyết, không xử lý nối tiếp từng đối thủ theo thứ tự ghế để làm chậm người đã đủ tiền.
 - Sau giao dịch/đổi chủ/phá sản cần kiểm tra thắng ngay theo các điều kiện.
 
 ## 7. Thuế, tù, dịch chuyển và các ô đặc biệt
@@ -182,22 +187,25 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 ### 7.2. Nhà tù (ô 8)
 
 - Dừng tại ô 8 bằng di chuyển thường → bị giam; **đi ngang không bị giam**. Thẻ Vào nhà tù cũng dẫn đến trạng thái giam.
-- **Luật mới người dùng phê duyệt, thay thế Word §3.2h:** tối đa **3 lượt riêng ở tù**; **lượt bị bắt không tính**. Trong thời gian bị giam vẫn thu tiền thuê BĐS.
+- **Giới hạn đã chốt và đã có trong Word hiện tại:** tối đa **3 lượt riêng ở tù**; **lượt bị bắt không tính**. Trong thời gian bị giam vẫn thu tiền thuê BĐS. Quyết định JAIL-03 thay bản Word cũ, không phải mâu thuẫn với DOCX đang có.
 - Khi đến lượt trong tù, bắt buộc chọn 1 trong 3: **(1) tung hai xúc xắc**, **(2) trả 200.000**, **(3) dùng thẻ Ra tù đang giữ**.
 - Chọn tung ở lượt tù1 hoặc2: **ra đôi → bắt buộc ra tù, di chuyển theo chính kết quả đó và được tung thêm theo luật đôi**; không đôi → còn tù, kết thúc lượt.
+- Strategist có thể dùng Active **gieo lại cả hai xúc xắc thử ra tù trước khi chốt**, phải nhận kết quả mới. Chỉ kết quả cuối quyết định đôi/không đôi, di chuyển và phí bắt buộc; không dùng kết quả đầu để thu phí rồi lại xử lý kết quả mới.
 - Ở lượt tù thứ3, vẫn chọn tung/trả200.000/thẻ Ra tù. Nếu chọn tung và **không đôi**, phát sinh nghĩa vụ bắt buộc **200.000**; thiếu thì thanh lý, vẫn không đủ thì phá sản. Trả thành công được thả **cuối lượt thứ3, không di chuyển thêm**; đến lượt riêng kế tiếp mới đi bình thường.
 - Nếu lượt tù thứ3 tung được đôi hoặc chủ động trả tiền/dùng thẻ trước tung thì ra tù theo cách thông thường, không áp nhánh thả cuối lượt vì thất bại. Đếm lượt tù tách khỏi số lần tung và cooldown; một lần bị bắt lại bắt đầu đợt giam mới.
+- Nếu lượt tù thứ3 thất bại nhưng Lawyer Ultimate miễn phí theo P02, vẫn thả cuối lượt, không di chuyển thêm.
 - Chọn trả tiền/dùng thẻ → ra tù, **sau đó tung xúc xắc bình thường**.
 
 ### 7.3. Dịch chuyển (ô 24)
 
-- Tại ô 24 có thể **trả 100.000** để chọn ô đích; ô đích vẫn **kích hoạt đầy đủ hiệu ứng**. Nếu hành trình chọn **vượt qua ô xuất phát** thì nhận **100.000** đúng luật.
+- Tại ô 24 có thể **trả 100.000** để chọn ô đích; ô đích vẫn **kích hoạt đầy đủ hiệu ứng**. Hành trình hợp lệ đi qua hoặc dừng đúng ô Xuất phát nhận **200.000** theo luật §2.
 - Không cho một thao tác dịch chuyển kích hoạt lại **chính ô 24** tạo vòng vô hạn.
+- **Q10 đã duyệt:** mọi chặng dịch vụ và thẻ tới ô8/24 đi **về phía trước** và nhận thưởng qua0 như di chuyển hợp lệ. Dịch vụ không cho chọn24 làm đích. Nếu một thẻ trong chuỗi đưa lại tới24, được chọn trả100.000 sử dụng dịch vụ tiếp; **không khóa toàn bộ chuỗi chỉ vì đã dùng dịch vụ trước đó**.
 - Thẻ **Đến ô dịch chuyển** đưa nhân vật đến ô 24; việc sử dụng chức năng dịch chuyển **vẫn phải trả phí 100.000**.
 
 ### 7.4. Tổ chức sự kiện (ô 16)
 
-- Có thể trả **200.000** để chọn một **TP thuộc chính mình**, +50% tiền thuê trong **2 lượt riêng tiếp theo**, không áp dụng biển.
+- Mỗi lần trả **200.000** chọn một **TP thuộc chính mình** theo lễ hội tổ chức toàn cục tại §4.2: cùng chủ/cùng TP cộng thêm50% thuê gốc, không hết hạn; đổi TP/người tổ chức thì thay bằng50%. Không áp biển; thẻ12 dùng đúng cùng cơ chế.
 
 ## 8. Đúng 14 thẻ sự kiện
 
@@ -212,9 +220,9 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 | 7 | Vào nhà tù | Chuyển người rút tới nhà tù và vào trạng thái bị giam. |
 | 8 | Ra tù | **Giữ lại**, dùng ra khỏi tù; mỗi người giữ tối đa 1. |
 | 9 | Phá tài sản | Phá một TP đối thủ **Cọc–Nhà3**: về ngân hàng, chủ cũ được ngân hàng hoàn **100% vốn thực còn lại**; không khách sạn/biển. |
-| 10 | Quà từ đối thủ | **Mỗi đối thủ còn chơi** bắt buộc chuyển **100.000** cho người rút; thiếu thì thanh lý/phá sản. |
+| 10 | Quà từ đối thủ | Tạo **đồng thời** nghĩa vụ100.000 cho mọi đối thủ còn chơi; người đủ tiền tự chuyển ngay, mọi người thiếu cùng chờ thanh lý/phá sản. Người rút chờ batch giải quyết xong. |
 | 11 | Đến ô dịch chuyển | Di chuyển đến ô **24**; nếu chọn dùng dịch chuyển thì **vẫn mất 100.000**, sau đó kích hoạt ô đến. |
-| 12 | Tổ chức lễ hội | Có thể trả **200.000** cho 1 TP của mình, **+50% tiền thuê trong 2 lượt riêng**; không biển. |
+| 12 | Tổ chức lễ hội | Tùy chọn trả **200.000** cho một TP của mình, dùng chung lễ hội tổ chức toàn cục §4.2: cùng chủ/cùng TP thêm50% thuê gốc; đổi TP/người tổ chức thay bằng50%; không hết hạn, không biển. |
 | 13 | Cúp điện | Chọn TP đối thủ **chưa là Khách sạn**, chủ TP không thu thuê cho tới hết **3 lượt riêng tiếp theo của người sử dụng thẻ**; đổi chủ hoặc lên Khách sạn thì hủy ngay. |
 | 14 | Tặng quà 200.000 | Người rút bắt buộc chọn một đối thủ và chuyển **200.000**; thiếu thì thanh lý/phá sản. |
 
@@ -222,8 +230,9 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 - Bảo vệ công trình **tự kích hoạt** khi một tấn công hợp lệ chạm tài sản; nếu mục tiêu vốn miễn nhiễm thì **không mất thẻ**. Miễn thuế và Giảm tiền thuê cho người chơi **chủ động quyết định** dùng khi nghĩa vụ phát sinh.
 - Không có mục tiêu hợp lệ → thẻ **không có hiệu lực**; không tự chuyển mục tiêu sang khách sạn/biển. Nếu Bảo vệ chặn Phá tài sản → **không phá, không bồi hoàn**.
 - Cúp điện **hủy ngay** khi TP đổi chủ hoặc nâng thành Khách sạn; **tung đôi thêm không tạo lượt mới** để đếm hiệu lực.
+- **Q17:** nguồn tạo effect phá sản thì giữ effect qua vòng đang dở; nếu còn **N lượt riêng** đến hạn, chuyển thành **N vòng chung mới hoàn chỉnh tiếp theo**, không đếm vòng dở. Quy tắc hủy do đổi chủ/Hotel vẫn ưu tiên. Lễ hội tổ chức không có hạn lượt và vẫn mất theo Q15 khi tài sản đổi chủ.
 - Thẻ chuyển tiền áp dụng nghĩa vụ bắt buộc; người nhận chỉ lấy **số dư thực còn lại** khi bên trả đã thanh lý hết mà vẫn phá sản.
-- Nhà Chiến Lược Passive xem trước **thẻ tiếp theo** trong trình tự rút; logic rút thẻ cần cung cấp thông tin nhất quán nhưng **báo cáo không quy định thuật toán shuffle/rút lại**, không tự tuyên bố một kiểu deck là luật bắt buộc.
+- Nhà Chiến Lược Passive xem trước **thẻ tiếp theo** trong trình tự rút; logic rút thẻ cần cung cấp thông tin nhất quán nhưng **Q02 được người dùng duyệt ngày2026-11-19:** mỗi lần chọn ngẫu nhiên đều trong14 loại (1/14 mỗi loại), có hoàn lại nên có thể gặp lại ngay; không có bộ hữu hạn/hết bài. Thẻ giữ trùng bỏ lá mới; preview là đúng lá kế tiếp, không bốc lại khi xem.
 
 ## 9. Sáu nghề nghiệp — Passive, Active, Ultimate, Weakness
 
@@ -240,12 +249,12 @@ Mốc Ultimate Doanh Nhân là ngoại lệ đã chốt ở §9: xóa hiệu l�
 
 | Nghề | Passive | Active | Cooldown | Ultimate (1 lần/trận) | Điểm yếu |
 |---|---|---|---:|---|---|
-| **Nhà Đầu Tư** | Giảm **10%** giá mua BĐS **chưa chủ từ ngân hàng**; không cưỡng chế | Thêm **15% giảm cho lần mua tiếp theo từ ngân hàng**, có thể chờ đến khi dùng; Passive + Active tổng giảm **25%** | **5 lượt riêng** | Mua cưỡng chế **từ xa** TP đối thủ Cọc–Nhà3 với **150%** giá niêm yết; không trả thuê, không biển/khách sạn | Giá nâng cấp thường **+10%** |
-| **Doanh Nhân** | Thuê BĐS nhận từ đối thủ **+10%** | Thuê **+30% trong 2 lượt riêng** | **6 lượt riêng** | **Nhân đôi khoản thuê** từ lúc kích hoạt tới **ngay trước lượt riêng kế tiếp** của mình (Q05) | Giá mua BĐS **+5%** |
+| **Nhà Đầu Tư** | Giảm **10%** giá mua BĐS **chưa chủ từ ngân hàng**; không cưỡng chế | Thêm **15% giảm cho lần mua tiếp theo từ ngân hàng**, có thể chờ; Passive + Active tổng giảm **25%**. Còn coupon thì không kích hoạt lại, kể cả hết cooldown | **5 lượt riêng** | Mua cưỡng chế **từ xa** TP đối thủ Cọc–Nhà3 với **150%** giá niêm yết; không trả thuê, không biển/khách sạn | Giá nâng cấp thường **+10%** |
+| **Doanh Nhân** | Thuê BĐS nhận từ đối thủ **+10%** | Thuê **+30% trong 2 lượt riêng** | **6 lượt riêng** | **Nhân đôi khoản thuê** từ lúc kích hoạt tới **ngay trước lượt riêng kế tiếp** của mình (Q05) | Mua **từ ngân hàng +5%**; cưỡng chế thường vẫn **200%** |
 | **Kỹ Sư** | Nâng cấp thường **−15% chi phí** | Nâng **miễn phí đúng 1 cấp** TP của mình từ xa, kể cả Nhà3→Khách sạn khi hợp lệ | **7 lượt riêng** | Nâng **từ xa thẳng Khách sạn**, trả **50% tổng chênh lệch niêm yết** của các cấp chưa có; **không** chồng Passive −15% | Tiền thuê cơ bản **−10%** |
 | **Luật Sư** | Giảm **25%** thuế/phạt **chỉ từ thẻ Nộp phạt thuế**, không giảm thuế ô30 | **Hủy một lần trả thuê**, kích hoạt trước lúc thanh toán | **6 lượt riêng** | Hủy các nghĩa vụ thanh toán bắt buộc phát sinh **trong lượt riêng kích hoạt** (thuê, thuế, phạt); không miễn mua/nâng/dịch vụ tự chọn hoặc trả nợ Banker | Không tạo tiền trực tiếp |
 | **Banker** | Cuối **mỗi vòng chung**, nhận **1% tiền mặt dương**, làm tròn xuống | Vay ngay **100.000**, bắt buộc trả **110.000 vào cuối lượt riêng thứ 5 tiếp theo** | **7 lượt riêng** | Nhận **200.000** từ ngân hàng | Không ưu đãi giá mua BĐS |
-| **Nhà Chiến Lược** | Xem trước thẻ sự kiện kế tiếp | Gieo lại **hai xúc xắc trước khi di chuyển**, phải chấp nhận kết quả mới | **5 lượt riêng** | Thay lần gieo đang được phép bằng chọn ô **phía trước 1–6 ô**, đến và kích hoạt ô; không tự sinh gieo thêm | Không ưu đãi kinh tế cố định |
+| **Nhà Chiến Lược** | Xem trước thẻ sự kiện kế tiếp | Gieo lại **hai xúc xắc trước khi chốt/di chuyển**, gồm cả thử ra tù; phải nhận kết quả mới | **5 lượt riêng** | Thay lần gieo đang được phép bằng chọn ô **phía trước 1–6 ô**, đến và kích hoạt ô; không tự sinh gieo thêm | Không ưu đãi kinh tế cố định |
 
 **Giữ nguyên điểm yếu** kể cả khi nghề có lợi thế mạnh; không cắt bỏ Weakness. Ultimate Kỹ Sư có chi phí 50% chênh lệch, không phải nâng miễn phí.
 
@@ -262,7 +271,7 @@ Sau giao dịch hoặc thay đổi quyền sở hữu, kiểm tra điều kiện
 ## 11. Yêu cầu UI / AI / trải nghiệm
 
 - Main menu: **Bắt đầu**, **Hướng dẫn/Luật chơi**, **Cài đặt âm thanh**, **Thoát**.
-- Setup: **chế độ AI hoặc cùng máy**, số người ≤4, thời gian 30/45/60/vô hạn, chọn một trong **6 nghề nghiệp**; hiển thị Passive/Active/Ultimate/Weakness.
+- Setup: **chế độ AI hoặc cùng máy**, số người2–4, cho trùng nghề, người đầu ngẫu nhiên/thứ tự ghế cố định; thời gian30/45/60/vô hạn, chọn một trong6 nghề; hiển thị Passive/Active/Ultimate/Weakness.
 - Gameplay: bàn cờ 3D camera cố định; quân cờ, 2 xúc xắc, người tới lượt, tiền mặt, vị trí ô, BĐS, cooldown/thẻ, nút hành động/kết thúc lượt.
 - Popup mua TP: **Cọc/Nhà1/Nhà2/Nhà3/Bỏ qua**, tiền trước/sau giao dịch; popup mua cưỡng chế cho biết **tiền thuê bắt buộc trước rồi giá mua 200%**.
 - Bảng tài sản: quốc gia, TP, ô, cấp, giá Nhà3, giá cấp hiện tại, thuê gốc/thuê sau hiệu ứng, vốn thực, chủ sở hữu, lễ hội/Cúp điện; biển có giá mua và thuê theo số lượng biển.
@@ -315,16 +324,13 @@ Sau giao dịch hoặc thay đổi quyền sở hữu, kiểm tra điều kiện
 - 3 quốc gia gồm cả nước chỉ có 2 TP; 4 biển; phá sản; tie cash → BĐS → đồng thắng.
 - AI dùng action validator chung; HUD hiển thị tiền thuê, cooldown và nghĩa vụ chính xác.
 
-## 14. Những điều **chưa được báo cáo quy định chi tiết** — không tự coi là luật mới
+## 14. Phần còn mở và cách hiểu lịch sử quyết định
 
-Phần đã được người dùng phê duyệt mới không còn bị chặn bởi sự thiếu chi tiết của Word: Q04/Q05/Q06/Q09/Q11/Q13/Q20 và giới hạn tù ở trên. Những mục chưa được phê duyệt trong DECISIONS vẫn OPEN/PENDING; không tự đóng chúng vì một đề xuất kỹ thuật.
+Các câu trả lời mới ngày2026-11-17 trong DECISIONS đã giải quyết Q03/Q10/Q12/Q14/Q15/Q16/Q17/Q19, P01/P02 và hai chi tiết kỹ năng. Không tiếp tục chặn những nhánh ấy bằng câu hỏi cũ hoặc áp Word để phủ quyết luật mới.
 
-- Thuật toán shuffle/bốc lại 14 thẻ, trọng số xác suất mỗi thẻ, cách tạo seed RNG.
-- Có cho **trùng nghề nghiệp** giữa những người chơi hay không; số lượng người tối thiểu mỗi trận.
-- Những tương tác chưa nằm trong phạm vi một biện pháp chủ động của Q06, đặc biệt phí ra tù bắt buộc mới với miễn nghĩa vụ (P02).
-- Q07 giữ truy vết, không hỏi lại phần Word đã rõ: biển là BĐS; modifier thuê BĐS và thẻ Giảm thuê không giới hạn riêng TP. Ca D07 có kết quả cụ thể trong TEST_CASES, không còn bị chặn vì câu hỏi chung này.
-- Cách biểu diễn tập người chờ trong vòng khi phá sản còn cần thống nhất hợp đồng; điều kiện vòng theo Word vẫn dựa trên người chưa phá sản. **Thứ tự cuối lượt đã chốt Q09**, không hỏi lại trình tự đó.
-- Các nhánh thực sự còn thiếu: đường đi/thưởng ô0 của thẻ và nhận diện chuỗi dịch chuyển (Q10); ngoại lệ Hotel cùng lần dừng của Engineer (Q12); gia hạn/đổi chủ lễ hội tạm (Q14/Q15); coupon Investor chưa dùng khi hết cooldown (Q16); lựa chọn tài sản thanh lý và effect khi source bị loại (Q17); thứ tự người trả của thẻ nhiều nghĩa vụ (Q19). Khi đã có thắng tức thời thì dừng theo Q09/Q20, không hỏi lại có tiếp tục chuỗi sau thắng.
-- P01: hướng phá hòa giữa các bậc có phần lẻ bằng nhau khi chia đồng dư; P02: phí tù bắt buộc mới và miễn nghĩa vụ/thả tù; xem DECISIONS.
+- **Q02 APPROVED — 2026-11-19:** ngẫu nhiên đều14 loại mỗi lần, có hoàn lại; không có chồng bài bỏ hoặc tái tạo bộ. Thẻ giữ trùng bỏ lá mới; Strategist xem đúng lá đã xác định cho lần tiếp theo. Fixture cấp thẻ xác định chỉ phục vụ test.
+- Q01 giữ truy vết việc xác định Word; file hiện có, không yêu cầu người dùng thêm lại. Q07/Q18 giữ truy vết nhưng các ca biển/modifier và quà trong lượt miễn đã có oracle từ Word; không hỏi lại.
+- Điều kiện vòng dựa trên người chưa phá sản đã rõ; biểu diễn tập chờ Q08 và tên API/DTO vẫn là chi tiết kỹ thuật để các bên rà soát, không phải luật gameplay mới.
+- A01–A06 là đề xuất kỹ thuật; code đã triển khai không tự chứng minh cả nhóm đã phê duyệt API hoặc tích hợp Scene xong. Không đổi trạng thái mọi test đặc tả thành PASS theo một lần chạy domain.
 
-Agent được phép đề xuất phương án kỹ thuật có lý do cho các vấn đề này, nhưng **không tự khẳng định là quyết định gameplay đã chốt**. Nếu chức năng có thể làm mà không đụng chỗ thiếu, tiếp tục làm phần độc lập.
+Agent được đề xuất kỹ thuật có lý do; áp dụng Q02 đã duyệt, không tự bổ sung chính sách hoặc tính năng ngoài phạm vi. Nếu phát hiện trường hợp luật chưa có nguồn, báo tình huống và hỏi người dùng trước khi triển khai nhánh đó; phần độc lập vẫn tiếp tục.

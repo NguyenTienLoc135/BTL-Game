@@ -1,23 +1,33 @@
 using System;
 using BtlGame.Board;
 using BtlGame.Properties;
+using BtlGame.Skills;
 
 namespace BtlGame.Core
 {
-    public sealed class MatchCoordinator
+    public sealed partial class MatchCoordinator
     {
+        private const long StartTileReward = 200_000;
+        private const long TeleportFee = 100_000;
         private long _nextObligationId = 1;
         private long _nextEffectId = 1;
         private readonly IDiceSource _diceSource;
+        private readonly ICardActionProvider _cardProvider;
         public GameState State { get; }
 
-        public MatchCoordinator(GameState state, IDiceSource diceSource = null)
+        public MatchCoordinator(GameState state, IDiceSource diceSource = null, ICardActionProvider cardProvider = null)
         {
             State = state ?? throw new ArgumentNullException(nameof(state));
             _diceSource = diceSource ?? new RandomDiceSource();
+            _cardProvider = cardProvider;
         }
 
         public GameSnapshot QuerySnapshot() => State.CreateSnapshot();
+        public GameSnapshot QuerySnapshot(int playerId)
+        {
+            State.GetPlayer(playerId);
+            return new GameSnapshot(State, playerId);
+        }
 
         public MovementResult RollAndMove(int playerId)
         {
@@ -25,31 +35,46 @@ namespace BtlGame.Core
             return MoveByDice(playerId, _diceSource.Roll());
         }
 
-        private MovementResult MoveByDice(int playerId, DiceRoll roll)
+        private MovementResult MoveByDice(int playerId, DiceRoll roll, bool alreadyCommitted = false)
         {
             EnsureRunning();
             if (State.CurrentPlayerId != playerId) throw new InvalidOperationException("Chưa đến lượt người chơi.");
             if (State.Phase != TurnPhase.AwaitingRoll) throw new InvalidOperationException("Chưa có quyền gieo xúc xắc.");
-            if (State.TimeExpired) throw new InvalidOperationException("Đã hết giờ, không thể bắt đầu lần gieo mới.");
+            if (State.TimeExpired && !alreadyCommitted) throw new InvalidOperationException("Đã hết giờ, không thể bắt đầu lần gieo mới.");
             PlayerState player = State.GetPlayer(playerId);
             if (player.Status != PlayerStatus.Active || player.IsJailed)
                 throw new InvalidOperationException("Người chơi không thể di chuyển bằng xúc xắc lúc này.");
 
             MovementResult movement = BoardRules.CalculateMovement(player.Position, roll);
-            long startBonus = checked(movement.StartCrossings * 100_000L);
-            long resultingCash = checked(player.Cash + startBonus);
+            MovementResult applied = ApplyMovement(player, movement);
+            State.LastDiceRoll = roll;
+            State.LastDicePlayerId = playerId;
+            State.TeleportUsedInCurrentChain = false;
+            return applied;
+        }
+
+        private MovementResult ApplyMovement(PlayerState player, MovementResult movement, bool preserveDouble = false,
+            long movementFee = 0)
+        {
+            long startBonus = checked(movement.StartCrossings * StartTileReward);
+            long resultingCash = checked(player.Cash - movementFee + startBonus);
             player.Position = movement.ToTileId;
             player.Cash = resultingCash;
             State.CurrentActionId++;
             State.CurrentLandingId++;
             State.CurrentLandingDecisionUsed = false;
             State.RentSettledAtCurrentLandingTileId = null;
-            State.PendingDoubleRoll = movement.IsDouble;
+            State.TaxSettledAtCurrentLanding = false;
+            State.PendingDoubleRoll = preserveDouble ? State.PendingDoubleRoll : movement.IsDouble;
+            State.LandingResolutionStarted = false;
+            State.CardLandingResolved = false;
+            State.PendingRuleDecisionId = null;
             if (movement.ToTileId == 8)
             {
                 player.IsJailed = true;
                 player.JailTurnsStarted = 0;
                 State.PendingDoubleRoll = false;
+                State.PersonalTurnMustClose = true;
                 State.Phase = TurnPhase.EndTurn;
             }
             else
@@ -66,6 +91,7 @@ namespace BtlGame.Core
             EnsureRunning();
             if (State.Phase != TurnPhase.ResolvingLanding || State.ClockPaused || actionId != State.CurrentActionId)
                 throw new InvalidOperationException("Callback ô đến đã cũ hoặc đã được xử lý.");
+            EnsureMandatoryLandingResolved();
             State.Phase = !State.TimeExpired && State.PendingDoubleRoll
                 ? TurnPhase.AwaitingRoll
                 : TurnPhase.EndTurn;
@@ -83,6 +109,7 @@ namespace BtlGame.Core
             player.JailTurnsStarted = 0;
             State.PendingDoubleRoll = false;
             State.Phase = TurnPhase.EndTurn;
+            State.PersonalTurnMustClose = true;
             State.Revision++;
         }
 
@@ -92,6 +119,7 @@ namespace BtlGame.Core
             if (State.Phase != TurnPhase.EndTurn) throw new InvalidOperationException("Lượt chưa đến pha kết thúc.");
             if (State.ClockPaused) throw new InvalidOperationException("Còn popup quyết định đang tạm dừng trận.");
             if (State.PendingObligation != null) throw new InvalidOperationException("Còn nghĩa vụ chưa giải quyết.");
+            State.PersonalTurnMustClose = true;
             PlayerState current = State.GetPlayer(State.CurrentPlayerId);
             long endingTurnOrdinal = current.CompletedPersonalTurns + 1;
             if (current.Status == PlayerStatus.Active && current.BankerDebtDueAtTurnOrdinal == endingTurnOrdinal)
@@ -113,6 +141,8 @@ namespace BtlGame.Core
             State.RoundCompletedAtLastTurnBoundary = State.IsRoundComplete();
             if (State.RoundCompletedAtLastTurnBoundary)
             {
+                State.CompletedRounds++;
+                ExpireAfterRoundEffects();
                 ApplyBankerInterest();
                 State.ResetRound();
             }
@@ -131,6 +161,7 @@ namespace BtlGame.Core
                 return;
             }
             State.CurrentPlayerId = next.Id;
+            State.PersonalTurnMustClose = false;
             if (next.IsJailed)
             {
                 next.JailTurnsStarted++;
@@ -170,7 +201,9 @@ namespace BtlGame.Core
             bool rentReaction = State.Phase == TurnPhase.AwaitingObligation &&
                 State.PendingObligation != null && State.PendingObligation.Kind == ObligationKind.Rent &&
                 State.PendingObligation.PayerId == playerId;
-            CommitActiveCooldown(player, cooldownTurns, rentReaction);
+            if (rentReaction && (State.PendingObligation.PayableAmount == 0 || State.PendingObligation.ActiveMitigationUsed))
+                throw new InvalidOperationException("Không tiêu thêm kỹ năng cho nghĩa vụ đã được miễn/giảm.");
+            CommitActiveCooldown(player, cooldownTurns, rentReaction && State.CurrentPlayerId != playerId);
             State.Revision++;
         }
 
@@ -192,7 +225,7 @@ namespace BtlGame.Core
             EnsureActiveActionWindow(playerId);
             if (player.UltimateUsed) throw new InvalidOperationException("Ultimate đã được dùng trong trận này.");
             var effect = new TurnEffectState(_nextEffectId++, EffectKind.RentDouble, playerId, null, null,
-                0, null, checked(player.CompletedPersonalTurns + 2));
+                0, null, checked(player.CompletedPersonalTurns + 2), player.CompletedPersonalTurns + 1);
             State.AddEffect(effect);
             player.UltimateUsed = true;
             State.Revision++;
@@ -204,21 +237,21 @@ namespace BtlGame.Core
             EnsureRunning();
             PlayerState source = GetActivePlayer(sourcePlayerId);
             EnsureEffectActionWindow(sourcePlayerId);
+            if (kind == EffectKind.TemporaryFestival)
+                throw new ArgumentException("Lễ hội toàn bàn không có thời hạn lượt; phải qua hành động tổ chức lễ hội.", nameof(kind));
             if (kind == EffectKind.RentDouble) throw new ArgumentException("RentDouble dùng mốc Q05 riêng.", nameof(kind));
             if (durationOwnTurns <= 0) throw new ArgumentOutOfRangeException(nameof(durationOwnTurns));
+            if (kind == EffectKind.PaymentImmunity && durationOwnTurns != 1)
+                throw new ArgumentException("Miễn nghĩa vụ chỉ có hiệu lực trong lượt kích hoạt.", nameof(durationOwnTurns));
             if (targetPlayerId.HasValue) GetActivePlayer(targetPlayerId.Value);
             if (targetTileId.HasValue && BoardCatalog.Get(targetTileId.Value).Kind != TileKind.City)
                 throw new ArgumentException("Hiệu ứng này cần ô thành phố.", nameof(targetTileId));
-            if (kind == EffectKind.TemporaryFestival && !targetTileId.HasValue)
-                throw new ArgumentException("Lễ hội tạm cần thành phố mục tiêu.", nameof(targetTileId));
-            if (kind == EffectKind.TemporaryFestival)
-                foreach (TurnEffectState existing in State.ActiveEffects)
-                    if (existing.Kind == EffectKind.TemporaryFestival && existing.TargetTileId == targetTileId)
-                        throw new InvalidOperationException("Không được chồng lễ hội tạm trên cùng thành phố.");
 
-            long expiry = checked(source.CompletedPersonalTurns + durationOwnTurns + 1L);
+            long expiry = kind == EffectKind.PaymentImmunity
+                ? checked(source.CompletedPersonalTurns + 1L)
+                : checked(source.CompletedPersonalTurns + durationOwnTurns + 1L);
             var effect = new TurnEffectState(_nextEffectId++, kind, sourcePlayerId, targetPlayerId,
-                targetTileId, modifierBasisPoints, expiry, null);
+                targetTileId, modifierBasisPoints, expiry, null, source.CompletedPersonalTurns + 1);
             State.AddEffect(effect);
             State.Revision++;
             return effect;
@@ -238,7 +271,7 @@ namespace BtlGame.Core
             if (tile.Kind != TileKind.City || !property.OwnerId.HasValue || !property.Level.HasValue)
                 throw new InvalidOperationException("Chưa có thành phố cho thuê.");
 
-            int modifiers = additionalModifierBasisPoints;
+            int modifiers = additionalModifierBasisPoints + SkillRules.RentModifierBasisPoints(State.GetPlayer(property.OwnerId.Value).Role);
             foreach (int festivalCityId in State.FixedFestivalCityIds)
                 if (festivalCityId == tileId) { modifiers += 5_000; break; }
             bool exclusive = OwnsAllCitiesOfCountry(property.OwnerId.Value, tile.Country.Value);
@@ -247,11 +280,13 @@ namespace BtlGame.Core
             bool outage = false;
             foreach (TurnEffectState effect in State.ActiveEffects)
             {
+                if (effect.Kind == EffectKind.RentBonus && effect.SourcePlayerId == property.OwnerId &&
+                    (!effect.TargetPlayerId.HasValue || effect.TargetPlayerId == property.OwnerId) &&
+                    (!effect.TargetTileId.HasValue || effect.TargetTileId == tileId))
+                    modifiers = checked(modifiers + effect.ModifierBasisPoints);
                 if (effect.TargetTileId != tileId) continue;
                 if (effect.Kind == EffectKind.PowerOutage) outage = true;
-                if (effect.SourcePlayerId != property.OwnerId.Value) continue;
-                if (effect.Kind == EffectKind.TemporaryFestival) modifiers += 5_000;
-                if (effect.Kind == EffectKind.RentBonus) modifiers += effect.ModifierBasisPoints;
+                if (effect.Kind == EffectKind.TemporaryFestival) modifiers = checked(modifiers + effect.ModifierBasisPoints);
             }
             return EconomyRules.CityRent(tileId, property.Level.Value, modifiers, doubled,
                 false, false, false, false, false, outage);
@@ -266,9 +301,10 @@ namespace BtlGame.Core
             foreach (PropertyState candidate in State.Properties)
                 if (BoardCatalog.Get(candidate.TileId).Kind == TileKind.Beach && candidate.OwnerId == property.OwnerId)
                     ownedBeachCount++;
-            int modifiers = additionalModifierBasisPoints;
+            int modifiers = additionalModifierBasisPoints + SkillRules.RentModifierBasisPoints(State.GetPlayer(property.OwnerId.Value).Role);
             foreach (TurnEffectState effect in State.ActiveEffects)
                 if (effect.SourcePlayerId == property.OwnerId && effect.Kind == EffectKind.RentBonus &&
+                    (!effect.TargetPlayerId.HasValue || effect.TargetPlayerId == property.OwnerId) &&
                     (!effect.TargetTileId.HasValue || effect.TargetTileId == tileId))
                     modifiers += effect.ModifierBasisPoints;
             return EconomyRules.BeachRent(ownedBeachCount, modifiers, IsRentDoubleActive(property.OwnerId.Value));
@@ -291,6 +327,8 @@ namespace BtlGame.Core
             }
             if (kind == ObligationKind.Rent)
             {
+                if (State.RentSettledAtCurrentLandingTileId == propertyTileId && propertyTileId.HasValue)
+                    throw new InvalidOperationException("Tiền thuê của lần dừng này đã được giải quyết.");
                 if (!propertyTileId.HasValue || State.Phase != TurnPhase.ResolvingLanding ||
                     payerId != State.CurrentPlayerId || State.GetPlayer(payerId).Position != propertyTileId.Value)
                     throw new InvalidOperationException("Tiền thuê chỉ được ghi nhận tại ô đang dừng của người đi lượt.");
@@ -298,15 +336,24 @@ namespace BtlGame.Core
                 if (rented.OwnerId != recipientId || recipientId == payerId)
                     throw new InvalidOperationException("Bên nhận thuê không khớp chủ tài sản.");
             }
+            if (kind == ObligationKind.TaxTile)
+            {
+                if (payerId != State.CurrentPlayerId || State.Phase != TurnPhase.ResolvingLanding ||
+                    State.GetPlayer(payerId).Position != 30 || State.TaxSettledAtCurrentLanding)
+                    throw new InvalidOperationException("Thuế ô30 chỉ xử lý một lần trong lần dừng hiện tại.");
+            }
             if (kind == ObligationKind.ForcedJailReleaseFee)
             {
                 PlayerState jailedPayer = State.GetPlayer(payerId);
                 if (payerId != State.CurrentPlayerId || State.Phase != TurnPhase.AwaitingJailChoice ||
                     !jailedPayer.IsJailed || jailedPayer.JailTurnsStarted != 3)
                     throw new InvalidOperationException("Phí tù bắt buộc chỉ phát sinh sau lần thử thất bại ở lượt tù thứ ba.");
+                if (HasExistingPaymentImmunity(payerId) && State.Decisions.LawyerWaivesForcedJailFee != false)
+                    throw new InvalidOperationException("P02 chưa chốt tương tác miễn phí tù bắt buộc.");
             }
             MandatoryObligation obligation = new MandatoryObligation(_nextObligationId++, kind, payerId,
                 recipientId, fixedAmount, propertyTileId);
+            ApplyExistingPaymentEffects(obligation);
             State.PhaseBeforeObligation = State.Phase;
             State.ClockPausedBeforeObligation = State.ClockPaused;
             State.AddObligation(obligation);
@@ -329,6 +376,8 @@ namespace BtlGame.Core
             if (kind == ObligationKind.TaxTile && State.GetPlayer(payerId).Position != 30)
                 throw new InvalidOperationException("Thuế ô chỉ áp dụng tại ô 30.");
             PlayerState payer = State.GetPlayer(payerId);
+            if (kind == ObligationKind.TaxCard)
+                passiveReductionBasisPoints += SkillRules.TaxCardReductionBasisPoints(payer.Role);
             MoneyFraction assessed = EconomyRules.TaxAssessment(payer.Cash, payerId, State.Properties, passiveReductionBasisPoints);
             return CreateObligation(kind, payerId, recipientId, assessed.FloorToLong());
         }
@@ -348,6 +397,8 @@ namespace BtlGame.Core
             if (obligation.Kind == ObligationKind.Rent && obligation.PropertyTileId.HasValue &&
                 obligation.PayerId == State.CurrentPlayerId)
                 State.RentSettledAtCurrentLandingTileId = obligation.PropertyTileId;
+            if (obligation.Kind == ObligationKind.TaxTile && obligation.PayerId == State.CurrentPlayerId)
+                State.TaxSettledAtCurrentLanding = true;
             State.Revision++;
             CheckLastSolventPlayer();
         }
@@ -381,8 +432,10 @@ namespace BtlGame.Core
             PlayerState payer = GetActivePlayer(payerId);
             PropertyState property = State.GetProperty(tileId);
             if (property.OwnerId != payerId) throw new InvalidOperationException("Người chơi không sở hữu tài sản này.");
+            EnsureOwnershipChangeAllowed(tileId);
             long refund = EconomyRules.BankSaleValue(property.TotalInvestment);
             payer.Cash = checked(payer.Cash + refund);
+            OnPropertyOwnershipChanging(tileId);
             ResetProperty(property);
             RemovePowerOutageForTile(tileId);
             State.Revision++;
@@ -391,7 +444,7 @@ namespace BtlGame.Core
             {
                 SettlePendingObligation();
             }
-            else if (!HasProperty(payerId))
+            else if (!HasProperty(payerId) && CanResolveSourceBankruptcy(payerId))
             {
                 DeclareBankruptcy(payerId);
             }
@@ -408,6 +461,7 @@ namespace BtlGame.Core
             if (debtor.Cash >= obligation.PayableAmount)
                 throw new InvalidOperationException("Cần thanh toán nghĩa vụ nếu còn đủ tiền.");
             if (HasProperty(playerId)) throw new InvalidOperationException("Phải thanh lý toàn bộ tài sản trước khi phá sản.");
+            EnsureSourceBankruptcyEffectsDecided(playerId);
 
             if (obligation.RecipientId.HasValue)
             {
@@ -416,6 +470,7 @@ namespace BtlGame.Core
             }
             debtor.Cash = 0;
             debtor.Status = PlayerStatus.Bankrupt;
+            RemoveBankruptSourceEffects(playerId);
             State.RemoveFromRound(playerId);
             foreach (PropertyState property in State.Properties)
                 if (property.OwnerId == playerId)
@@ -427,6 +482,7 @@ namespace BtlGame.Core
             State.PendingObligation = null;
             State.ClockPaused = State.ClockPausedBeforeObligation;
             State.Phase = playerId == State.CurrentPlayerId ? TurnPhase.EndTurn : State.PhaseBeforeObligation;
+            if (State.GiftBatchActive) RefreshGiftBatchAfterPayment();
             State.Revision++;
             CheckLastSolventPlayer();
         }
@@ -468,32 +524,8 @@ namespace BtlGame.Core
             if (State.Phase != TurnPhase.AwaitingJailChoice) throw new InvalidOperationException("Không ở lượt chọn hành động trong tù.");
             if (player.JailTurnsStarted > 3) throw new InvalidOperationException("Số lượt tù không hợp lệ.");
             DiceRoll roll = _diceSource.Roll();
-            if (roll.IsDouble)
-            {
-                player.IsJailed = false;
-                player.JailTurnsStarted = 0;
-                State.Phase = TurnPhase.AwaitingRoll;
-                MoveByDice(playerId, roll);
-                return roll;
-            }
-            if (player.JailTurnsStarted < 3)
-            {
-                State.PendingDoubleRoll = false;
-                State.Phase = TurnPhase.EndTurn;
-                State.Revision++;
-                return roll;
-            }
-            if (lawyerUltimateCouldMitigateForcedFee)
-            {
-                State.PendingRuleDecisionId = "P02";
-                State.Phase = TurnPhase.AwaitingRuleDecision;
-                State.Revision++;
-                return roll;
-            }
-            State.PendingObligation = CreateObligation(ObligationKind.ForcedJailReleaseFee, playerId, null, 200_000);
-            player.JailFeeDue = 200_000;
-            State.Phase = TurnPhase.AwaitingObligation;
-            State.Revision++;
+            roll = new DiceRoll(roll.First, roll.Second);
+            ResolveJailRoll(playerId, roll, lawyerUltimateCouldMitigateForcedFee);
             return roll;
         }
 
@@ -533,14 +565,17 @@ namespace BtlGame.Core
                 throw new InvalidOperationException("Thành phố không thể mua từ ngân hàng.");
             EnsureLandingDecisionAvailable();
             if (level == PropertyLevel.Hotel) throw new InvalidOperationException("Không thể mua Khách sạn lần đầu.");
+            discountBasisPoints += PurchaseDiscount(buyer);
             ValidateDiscount(discountBasisPoints);
             long listedPrice = EconomyRules.ListedPrice(tileId, level);
             long cost = EconomyRules.RentToPay(listedPrice, discountBasisPoints);
             if (buyer.Cash < cost) throw new InvalidOperationException("Không đủ tiền mua.");
-            System.Collections.Generic.IReadOnlyList<long> investment = EconomyRules.AllocateInvestment(cost, level);
+            System.Collections.Generic.IReadOnlyList<long> investment = EconomyRules.AllocateInvestment(cost, level, State.Decisions.InvestmentTieBreak);
 
             buyer.Cash -= cost;
+            ConsumePurchaseCoupon(buyer.Id);
             property.OwnerId = buyer.Id;
+            property.AcquiredOnLandingId = State.CurrentLandingId;
             property.Level = level;
             for (int i = 0; i < investment.Count; i++) property.MutableInvestedByLevel[i] = investment[i];
             if (level == PropertyLevel.House3) property.House3ReachedLandingId = State.CurrentLandingId;
@@ -561,12 +596,15 @@ namespace BtlGame.Core
             if (tile.Kind != TileKind.Beach || property.OwnerId != null)
                 throw new InvalidOperationException("Bãi biển không thể mua từ ngân hàng.");
             EnsureLandingDecisionAvailable();
+            discountBasisPoints += PurchaseDiscount(buyer);
             ValidateDiscount(discountBasisPoints);
             long cost = EconomyRules.RentToPay(tile.BeachPrice, discountBasisPoints);
             if (buyer.Cash < cost) throw new InvalidOperationException("Không đủ tiền mua.");
 
             buyer.Cash -= cost;
+            ConsumePurchaseCoupon(buyer.Id);
             property.OwnerId = buyer.Id;
+            property.AcquiredOnLandingId = State.CurrentLandingId;
             property.BeachInvestment = cost;
             State.CurrentLandingDecisionUsed = true;
             State.Revision++;
@@ -585,7 +623,8 @@ namespace BtlGame.Core
                 throw new InvalidOperationException("Ô không đủ điều kiện cưỡng chế.");
             if (property.Level == PropertyLevel.Hotel)
                 throw new InvalidOperationException("Không thể cưỡng chế Khách sạn.");
-            if (purchaseBasisPoints != 20_000 && purchaseBasisPoints != 15_000)
+            EnsureOwnershipChangeAllowed(tileId);
+            if (purchaseBasisPoints != 15_000 && purchaseBasisPoints != NormalForcedPurchaseBasisPoints(buyer))
                 throw new ArgumentOutOfRangeException(nameof(purchaseBasisPoints));
             if (authorizedRemote && State.TimeExpired)
                 throw new InvalidOperationException("Không thể mở kỹ năng chủ động mới sau khi hết giờ.");
@@ -598,18 +637,21 @@ namespace BtlGame.Core
             if (!authorizedRemote && State.RentSettledAtCurrentLandingTileId != tileId)
                 throw new InvalidOperationException("Phải giải quyết tiền thuê trước khi cưỡng chế thường.");
             if ((!authorizedRemote && State.Phase != TurnPhase.ResolvingLanding) ||
-                (authorizedRemote && State.Phase != TurnPhase.AwaitingRoll && State.Phase != TurnPhase.ResolvingLanding && State.Phase != TurnPhase.EndTurn))
+                (authorizedRemote && State.Phase != TurnPhase.AwaitingRoll && State.Phase != TurnPhase.ResolvingLanding &&
+                    State.Phase != TurnPhase.EndTurn && State.Phase != TurnPhase.AwaitingJailChoice))
                 throw new InvalidOperationException("Cưỡng chế chỉ tiếp tục trong lần dừng đang xử lý.");
 
             long cost = new MoneyFraction(checked(EconomyRules.ListedPrice(tileId, property.Level.Value) * purchaseBasisPoints), 10_000).FloorToLong();
             if (buyer.Cash < cost) throw new InvalidOperationException("Không đủ tiền cưỡng chế.");
-            var investments = EconomyRules.AllocateInvestment(cost, property.Level.Value);
+            var investments = EconomyRules.AllocateInvestment(cost, property.Level.Value, State.Decisions.InvestmentTieBreak);
             PlayerState formerOwner = State.GetPlayer(property.OwnerId.Value);
             long formerOwnerCash = checked(formerOwner.Cash + cost);
 
             buyer.Cash -= cost;
             formerOwner.Cash = formerOwnerCash;
+            OnPropertyOwnershipChanging(tileId);
             property.OwnerId = buyerId;
+            property.AcquiredOnLandingId = State.CurrentLandingId;
             property.House3ReachedLandingId = null;
             Array.Clear(property.MutableInvestedByLevel, 0, property.MutableInvestedByLevel.Length);
             for (int i = 0; i < investments.Count; i++) property.MutableInvestedByLevel[i] = investments[i];
@@ -663,7 +705,9 @@ namespace BtlGame.Core
                 return new PropertyAttackResult(true, 0);
             }
             long refund = property.TotalInvestment;
+            EnsureOwnershipChangeAllowed(tileId);
             owner.Cash = checked(owner.Cash + refund);
+            OnPropertyOwnershipChanging(tileId);
             ResetProperty(property);
             RemovePowerOutageForTile(tileId);
             State.Revision++;
@@ -686,6 +730,15 @@ namespace BtlGame.Core
 
         public long UpgradeCity(int playerId, int tileId, long landingId, int priceModifierBasisPoints = 0)
         {
+            PropertyState property = State.GetProperty(tileId);
+            if (!property.Level.HasValue) throw new InvalidOperationException("Thành phố chưa có công trình.");
+            return UpgradeCity(playerId, tileId, (PropertyLevel)((int)property.Level.Value + 1),
+                landingId, priceModifierBasisPoints);
+        }
+
+        public long UpgradeCity(int playerId, int tileId, PropertyLevel targetLevel,
+            long landingId, int priceModifierBasisPoints = 0)
+        {
             EnsureRunning();
             PlayerState owner = GetActivePlayer(playerId);
             EnsureCurrentPlayer(playerId);
@@ -701,20 +754,25 @@ namespace BtlGame.Core
 
             PropertyLevel current = property.Level.Value;
             if (current == PropertyLevel.Hotel) throw new InvalidOperationException("Khách sạn không thể nâng thêm.");
-            PropertyLevel next = (PropertyLevel)((int)current + 1);
-            if (next == PropertyLevel.Hotel && property.House3ReachedLandingId == landingId)
+            if (!Enum.IsDefined(typeof(PropertyLevel), targetLevel) || targetLevel <= current)
+                throw new ArgumentOutOfRangeException(nameof(targetLevel));
+            if (targetLevel == PropertyLevel.Hotel &&
+                (current != PropertyLevel.House3 || property.House3ReachedLandingId == landingId))
                 throw new InvalidOperationException("Khách sạn chỉ được xây ở lần dừng sau khi đạt Nhà 3.");
-            long difference = EconomyRules.ListedPrice(tileId, next) - EconomyRules.ListedPrice(tileId, current);
+            long difference = EconomyRules.ListedPrice(tileId, targetLevel) - EconomyRules.ListedPrice(tileId, current);
+            priceModifierBasisPoints -= SkillRules.NormalUpgradeDiscountBasisPoints(owner.Role);
             long cost = EconomyRules.RentToPay(difference, -priceModifierBasisPoints);
             if (owner.Cash < cost) throw new InvalidOperationException("Không đủ tiền nâng cấp.");
+            var newInvestment = EconomyRules.AllocateUpgradeInvestment(cost, current, targetLevel, State.Decisions.InvestmentTieBreak);
 
             owner.Cash -= cost;
-            property.MutableInvestedByLevel[(int)next - 1] = cost;
-            property.Level = next;
+            for (int i = (int)current; i < (int)targetLevel; i++)
+                property.MutableInvestedByLevel[i] = newInvestment[i];
+            property.Level = targetLevel;
             property.NormalUpgradeUsedOnLandingId = landingId;
             State.CurrentLandingDecisionUsed = true;
-            if (next == PropertyLevel.House3) property.House3ReachedLandingId = landingId;
-            if (next == PropertyLevel.Hotel) RemovePowerOutageForTile(tileId);
+            if (targetLevel == PropertyLevel.House3) property.House3ReachedLandingId = landingId;
+            if (targetLevel == PropertyLevel.Hotel) RemovePowerOutageForTile(tileId);
             State.Revision++;
             return cost;
         }
@@ -724,13 +782,17 @@ namespace BtlGame.Core
             EnsureRunning();
             PlayerState seller = GetActivePlayer(playerId);
             EnsureCurrentPlayer(playerId);
-            if (State.Phase != TurnPhase.AwaitingRoll && State.Phase != TurnPhase.EndTurn)
+            if (State.TimeExpired) throw new InvalidOperationException("Không mở bán tự nguyện mới sau khi hết giờ.");
+            if ((State.ClockPaused && !State.DecisionAllowsSkills) || (State.Phase != TurnPhase.AwaitingRoll && State.Phase != TurnPhase.EndTurn &&
+                State.Phase != TurnPhase.AwaitingJailChoice))
                 throw new InvalidOperationException("Bán tự nguyện chỉ hợp lệ ở điểm dừng trước gieo hoặc sau khi xử lý ô.");
             PropertyState property = State.GetProperty(tileId);
             if (property.OwnerId != playerId) throw new InvalidOperationException("Người chơi không sở hữu tài sản này.");
+            EnsureOwnershipChangeAllowed(tileId);
             long refund = EconomyRules.BankSaleValue(property.TotalInvestment);
 
             seller.Cash = checked(seller.Cash + refund);
+            OnPropertyOwnershipChanging(tileId);
             ResetProperty(property);
             RemovePowerOutageForTile(tileId);
             State.Revision++;
@@ -747,7 +809,7 @@ namespace BtlGame.Core
                 TileDefinition tile = BoardCatalog.Get(property.TileId);
                 if (tile.Kind == TileKind.Beach) beaches++;
             }
-            if (beaches == 4) { Finish(WinReason.FourBeaches); return; }
+            if (beaches == 4) { Finish(WinReason.FourBeaches, new[] { playerId }); return; }
             foreach (CountryId country in Enum.GetValues(typeof(CountryId)))
             {
                 bool hasCities = false;
@@ -760,7 +822,7 @@ namespace BtlGame.Core
                 }
                 if (hasCities && ownsAll) countries.Add(country);
             }
-            if (countries.Count >= 3) Finish(WinReason.ThreeCountries);
+            if (countries.Count >= 3) Finish(WinReason.ThreeCountries, new[] { playerId });
         }
 
         private bool OwnsAllCitiesOfCountry(int playerId, CountryId country)
@@ -785,8 +847,9 @@ namespace BtlGame.Core
             }
         }
 
-        private void Finish(WinReason reason)
+        private void Finish(WinReason reason, System.Collections.Generic.IReadOnlyList<int> winnerIds)
         {
+            State.SetWinners(winnerIds);
             State.Status = MatchStatus.Finished;
             State.Phase = TurnPhase.Finished;
             State.Result = reason;
@@ -808,11 +871,12 @@ namespace BtlGame.Core
             property.BeachInvestment = 0;
             property.House3ReachedLandingId = null;
             property.NormalUpgradeUsedOnLandingId = null;
+            property.AcquiredOnLandingId = null;
         }
 
         private static void ValidateDiscount(int discountBasisPoints)
         {
-            if (discountBasisPoints < 0 || discountBasisPoints >= 10_000)
+            if (discountBasisPoints < -10_000 || discountBasisPoints >= 10_000)
                 throw new ArgumentOutOfRangeException(nameof(discountBasisPoints));
         }
 
@@ -827,13 +891,63 @@ namespace BtlGame.Core
                 throw new InvalidOperationException("Không còn lựa chọn mua/nâng hợp lệ trong lần dừng này.");
         }
 
+        private void EnsureMandatoryLandingResolved()
+        {
+            PlayerState actor = State.GetPlayer(State.CurrentPlayerId);
+            TileDefinition tile = BoardCatalog.Get(actor.Position);
+            if (tile.Kind == TileKind.Tax && !State.TaxSettledAtCurrentLanding)
+                throw new InvalidOperationException("Chưa xử lý thuế bắt buộc của ô30.");
+            if (tile.Kind == TileKind.City || tile.Kind == TileKind.Beach)
+            {
+                PropertyState property = State.GetProperty(tile.Id);
+                if (property.OwnerId.HasValue && property.OwnerId != actor.Id &&
+                    State.RentSettledAtCurrentLandingTileId != tile.Id)
+                    throw new InvalidOperationException("Chưa giải quyết tiền thuê bắt buộc của lần dừng.");
+            }
+        }
+
+        private bool HasExistingPaymentImmunity(int payerId)
+        {
+            if (State.CurrentPlayerId != payerId) return false;
+            foreach (TurnEffectState effect in State.ActiveEffects)
+                if (effect.Kind == EffectKind.PaymentImmunity && effect.SourcePlayerId == payerId &&
+                    (!effect.TargetPlayerId.HasValue || effect.TargetPlayerId == payerId)) return true;
+            return false;
+        }
+
+        private void ApplyExistingPaymentEffects(MandatoryObligation obligation)
+        {
+            bool exemptible = obligation.Kind == ObligationKind.Rent || obligation.Kind == ObligationKind.TaxTile ||
+                obligation.Kind == ObligationKind.TaxCard || obligation.Kind == ObligationKind.Gift ||
+                obligation.Kind == ObligationKind.OtherMandatory;
+            if (exemptible && HasExistingPaymentImmunity(obligation.PayerId))
+            {
+                obligation.PayableAmount = 0;
+                return;
+            }
+            if (obligation.Kind != ObligationKind.Rent || obligation.PayableAmount == 0) return;
+            foreach (TurnEffectState effect in State.ActiveEffects)
+                if (effect.Kind == EffectKind.CancelRent && effect.SourcePlayerId == obligation.PayerId &&
+                    (!effect.TargetPlayerId.HasValue || effect.TargetPlayerId == obligation.PayerId))
+                {
+                    obligation.PayableAmount = 0;
+                    State.RemoveEffect(effect);
+                    return;
+                }
+        }
+
         private void EnsureActiveActionWindow(int playerId, bool allowRentReaction = false)
         {
             bool regularWindow = State.CurrentPlayerId == playerId &&
-                (State.Phase == TurnPhase.AwaitingRoll || State.Phase == TurnPhase.EndTurn);
+                (State.Phase == TurnPhase.AwaitingRoll || State.Phase == TurnPhase.EndTurn ||
+                 State.Phase == TurnPhase.AwaitingJailChoice);
             bool rentReaction = allowRentReaction && State.Phase == TurnPhase.AwaitingObligation &&
                 State.PendingObligation != null && State.PendingObligation.Kind == ObligationKind.Rent &&
                 State.PendingObligation.PayerId == playerId;
+            if (State.TimeExpired && !rentReaction)
+                throw new InvalidOperationException("Không mở kỹ năng chủ động mới sau khi hết giờ.");
+            if (regularWindow && State.ClockPaused && !State.DecisionAllowsSkills)
+                throw new InvalidOperationException("Còn quyết định đang chờ, chưa thể mở kỹ năng mới.");
             if (!regularWindow && !rentReaction)
                 throw new InvalidOperationException("Kỹ năng chưa ở cửa sổ hành động hợp lệ.");
         }
@@ -842,7 +956,7 @@ namespace BtlGame.Core
         {
             EnsureCurrentPlayer(playerId);
             bool allowedPhase = State.Phase == TurnPhase.AwaitingRoll || State.Phase == TurnPhase.ResolvingLanding ||
-                State.Phase == TurnPhase.EndTurn;
+                State.Phase == TurnPhase.EndTurn || State.Phase == TurnPhase.AwaitingJailChoice;
             if (!allowedPhase || (State.TimeExpired && State.Phase != TurnPhase.ResolvingLanding))
                 throw new InvalidOperationException("Hiệu ứng không được kích hoạt ngoài cửa sổ hợp lệ.");
         }
@@ -886,6 +1000,11 @@ namespace BtlGame.Core
 
         private void ResumeAfterObligation(MandatoryObligation obligation)
         {
+            if (State.GiftBatchActive)
+            {
+                RefreshGiftBatchAfterPayment();
+                return;
+            }
             State.ClockPaused = State.ClockPausedBeforeObligation;
             if (obligation.Kind == ObligationKind.ForcedJailReleaseFee)
             {
@@ -925,7 +1044,7 @@ namespace BtlGame.Core
                 if (survivor != null) return;
                 survivor = player;
             }
-            if (survivor != null) Finish(WinReason.LastSolventPlayer);
+            if (survivor != null) Finish(WinReason.LastSolventPlayer, new[] { survivor.Id });
         }
 
         private PlayerState FindNextActivePlayer(int afterSeatIndex)
@@ -954,7 +1073,7 @@ namespace BtlGame.Core
             long bestCash = long.MinValue;
             long bestPropertyValue = long.MinValue;
             int cashLeaders = 0;
-            int winners = 0;
+            var winners = new System.Collections.Generic.List<int>();
             foreach (PlayerState player in State.Players)
             {
                 if (player.Status != PlayerStatus.Active) continue;
@@ -964,17 +1083,18 @@ namespace BtlGame.Core
                     bestCash = player.Cash;
                     bestPropertyValue = value;
                     cashLeaders = 1;
-                    winners = 1;
+                    winners.Clear();
+                    winners.Add(player.Id);
                 }
                 else if (player.Cash == bestCash)
                 {
                     cashLeaders++;
-                    if (value > bestPropertyValue) { bestPropertyValue = value; winners = 1; }
-                    else if (value == bestPropertyValue) winners++;
+                    if (value > bestPropertyValue) { bestPropertyValue = value; winners.Clear(); winners.Add(player.Id); }
+                    else if (value == bestPropertyValue) winners.Add(player.Id);
                 }
             }
-            if (winners == 0) return;
-            Finish(winners > 1 ? WinReason.TimeShared : cashLeaders > 1 ? WinReason.TimePropertyValue : WinReason.TimeCash);
+            if (winners.Count == 0) return;
+            Finish(winners.Count > 1 ? WinReason.TimeShared : cashLeaders > 1 ? WinReason.TimePropertyValue : WinReason.TimeCash, winners);
         }
 
         private long GetListedPropertyValue(int playerId)

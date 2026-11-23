@@ -4,6 +4,7 @@ using BtlGame.Core;
 
 namespace BtlGame.Board
 {
+    public enum MovementSource { Dice, Teleport, Card, StrategistUltimate }
     public readonly struct DiceRoll
     {
         public int First { get; }
@@ -39,15 +40,18 @@ namespace BtlGame.Board
         public int Steps { get; }
         public int StartCrossings { get; }
         public bool IsDouble { get; }
+        public MovementSource Source { get; }
         public IReadOnlyList<int> Path { get; }
 
-        internal MovementResult(int from, int to, int steps, int crossings, bool isDouble, List<int> path)
+        internal MovementResult(int from, int to, int steps, int crossings, bool isDouble, List<int> path,
+            MovementSource source = MovementSource.Dice)
         {
             FromTileId = from;
             ToTileId = to;
             Steps = steps;
             StartCrossings = crossings;
             IsDouble = isDouble;
+            Source = source;
             Path = path.AsReadOnly();
         }
     }
@@ -55,12 +59,17 @@ namespace BtlGame.Board
     public static class BoardRules
     {
         public static MovementResult CalculateMovement(int fromTileId, DiceRoll roll)
+            => CalculateMovement(fromTileId, roll.Total, roll.IsDouble);
+
+        public static MovementResult CalculateMovement(int fromTileId, int steps, bool isDouble = false,
+            MovementSource source = MovementSource.Dice)
         {
             BoardCatalog.Get(fromTileId);
-            var path = new List<int>(roll.Total);
+            if (steps < 1 || steps > 31) throw new ArgumentOutOfRangeException(nameof(steps));
+            var path = new List<int>(steps);
             int crossings = 0;
             int position = fromTileId;
-            for (int i = 0; i < roll.Total; i++)
+            for (int i = 0; i < steps; i++)
             {
                 position++;
                 if (position == 32)
@@ -71,7 +80,7 @@ namespace BtlGame.Board
                 path.Add(position);
             }
 
-            return new MovementResult(fromTileId, position, roll.Total, crossings, roll.IsDouble, path);
+            return new MovementResult(fromTileId, position, steps, crossings, isDouble, path, source);
         }
 
         public static int CountForwardPath(int fromTileId, int toTileId)

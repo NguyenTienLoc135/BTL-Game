@@ -1,81 +1,81 @@
+using System;
+using TMPro;
 using UnityEngine;
-using BtlGame.Core;
 
-namespace BtlGame.Board
+namespace BTLGame.Board
 {
     public sealed class BoardTileView : MonoBehaviour
     {
+        [SerializeField] private int _tileId = -1;
         [SerializeField] private Renderer _bodyRenderer;
         [SerializeField] private Renderer _ownerMarker;
-        [SerializeField] private TextMesh _nameLabel;
-        [SerializeField] private TextMesh _idLabel;
+        [SerializeField] private TMP_Text _nameLabel;
+        [SerializeField] private TMP_Text _detailLabel;
         [SerializeField] private Transform[] _propertyStages = new Transform[5];
-        [SerializeField] private Renderer[] _highlightRenderers;
+        [SerializeField] private GameObject _highlightObject;
 
-        private MaterialPropertyBlock _propertyBlock;
-        [SerializeField] private int _tileId = -1;
-
+        private MaterialPropertyBlock _block;
         public int TileId => _tileId;
 
-        public void Bind(TileDefinition definition, Color tileColor)
+        public void Configure(int tileId, Renderer body, Renderer owner, TMP_Text name,
+            TMP_Text detail, Transform[] stages, GameObject highlight)
         {
-            if (definition == null) throw new System.ArgumentNullException(nameof(definition));
-            _tileId = definition.Id;
-            if (_bodyRenderer == null) _bodyRenderer = transform.Find("TileBody")?.GetComponent<Renderer>();
-            if (_ownerMarker == null) _ownerMarker = transform.Find("OwnerMarker")?.GetComponent<Renderer>();
-            if (_nameLabel == null) _nameLabel = transform.Find("NameLabel")?.GetComponent<TextMesh>();
-            if (_idLabel == null) _idLabel = transform.Find("IdLabel")?.GetComponent<TextMesh>();
-            if (_bodyRenderer != null) SetRendererColor(_bodyRenderer, tileColor);
-            if (_nameLabel != null) _nameLabel.text = definition.Name;
-            if (_idLabel != null) _idLabel.text = definition.Id.ToString("00");
+            _tileId = tileId;
+            _bodyRenderer = body;
+            _ownerMarker = owner;
+            _nameLabel = name;
+            _detailLabel = detail;
+            _propertyStages = stages ?? Array.Empty<Transform>();
+            _highlightObject = highlight;
+        }
+
+        public void Bind(BoardTileVisualDefinition definition)
+        {
+            if (definition == null) throw new ArgumentNullException(nameof(definition));
+            if (_tileId >= 0 && _tileId != definition.TileId)
+                throw new InvalidOperationException("TileView ID và định nghĩa không khớp.");
+            _tileId = definition.TileId;
+            if (_bodyRenderer != null) SetColor(_bodyRenderer, definition.Color);
             if (_ownerMarker != null) _ownerMarker.gameObject.SetActive(false);
-            SetPropertyLevel(null);
+            if (_nameLabel != null) _nameLabel.text = definition.DisplayName;
+            if (_detailLabel != null)
+            {
+                string line = definition.CountryName;
+                if (!string.IsNullOrEmpty(definition.DisplayCode)) line += "  ·  " + definition.DisplayCode;
+                if (!string.IsNullOrEmpty(definition.PriceLabel)) line += "\n" + definition.PriceLabel;
+                _detailLabel.text = line;
+            }
+            SetLevel(null);
             SetHighlighted(false);
         }
 
-        public void ConfigureVisuals(Renderer bodyRenderer, Renderer ownerMarker, TextMesh nameLabel,
-            TextMesh idLabel, Transform[] propertyStages, Renderer[] highlightRenderers)
-        {
-            _bodyRenderer = bodyRenderer;
-            _ownerMarker = ownerMarker;
-            _nameLabel = nameLabel;
-            _idLabel = idLabel;
-            _propertyStages = propertyStages ?? System.Array.Empty<Transform>();
-            _highlightRenderers = highlightRenderers ?? System.Array.Empty<Renderer>();
-        }
-
-        public void SetOwner(int? ownerId, Color ownerColor)
+        public void SetOwner(int? ownerId, Color color)
         {
             if (_ownerMarker == null) return;
             _ownerMarker.gameObject.SetActive(ownerId.HasValue);
-            if (!ownerId.HasValue) return;
-            SetRendererColor(_ownerMarker, ownerColor);
+            if (ownerId.HasValue) SetColor(_ownerMarker, color);
         }
 
-        public void SetPropertyLevel(PropertyLevel? level)
+        public void SetLevel(PropertyVisualLevel? level)
         {
+            if (_propertyStages == null) return;
             for (int i = 0; i < _propertyStages.Length; i++)
                 if (_propertyStages[i] != null)
                     _propertyStages[i].gameObject.SetActive(level.HasValue && (int)level.Value == i + 1);
         }
 
-        public void SetHighlighted(bool highlighted)
+        public void SetHighlighted(bool value)
         {
-            if (_highlightRenderers == null) return;
-            foreach (Renderer target in _highlightRenderers)
-            {
-                if (target == null) continue;
-                target.gameObject.SetActive(highlighted);
-            }
+            if (_highlightObject != null) _highlightObject.SetActive(value);
         }
 
-        private void SetRendererColor(Renderer target, Color color)
+        private void SetColor(Renderer target, Color color)
         {
-            _propertyBlock ??= new MaterialPropertyBlock();
-            target.GetPropertyBlock(_propertyBlock);
-            _propertyBlock.SetColor("_BaseColor", color);
-            _propertyBlock.SetColor("_Color", color);
-            target.SetPropertyBlock(_propertyBlock);
+            _block ??= new MaterialPropertyBlock();
+            target.GetPropertyBlock(_block);
+            _block.SetColor("_BaseColor", color);
+            _block.SetColor("_Color", color);
+            target.SetPropertyBlock(_block);
         }
     }
 }

@@ -1,6 +1,6 @@
 # Hợp đồng dữ liệu đề xuất — Cờ Tỷ Phú RPG
 
-Ngày cập nhật: 2026-11-06. **Luật Q đã được duyệt; biểu diễn trường/DTO dưới đây vẫn là ĐỀ XUẤT cần thống nhất hợp đồng**. Chỉ mô tả dữ liệu, không tạo class hoặc asset.
+Ngày cập nhật: **2026-11-17**. **Luật bổ sung đã được người dùng duyệt; biểu diễn trường/DTO dưới đây vẫn cần nhóm thống nhất hợp đồng**. Đối chiếu API A/D hiện có qua README/source; triển khai một DTO không tự phê duyệt toàn bộ A01–A06.
 
 Đã đọc đầy đủ các Markdown nguồn và [Word](references/GAME_DESIGN_DOCUMENT.docx). Ưu tiên quyết định người dùng mới → Word cho phần không đổi → [GAME_RULES](GAME_RULES.md) → hợp đồng này. Nguồn duyệt ngày2026-11-06 và ngoại lệ so với Word nằm trong [DECISIONS](DECISIONS.md); không tự bổ sung luật OPEN/PENDING.
 
@@ -35,7 +35,7 @@ Bảng dưới sao từ GAME_RULES §3; ID ô bất biến. Dấu — nghĩa là
 
 | TileId | TileType đề xuất | Tên | CountryId / mã hiển thị | Giá Nhà3 hoặc giá mua biển |
 |---:|---|---|---|---:|
-| 0 | Start | Xuất phát | — | — |
+| 0 | Start | Xuất phát | Thưởng 200.000 khi đi qua hoặc dừng đúng ô trong hành trình hợp lệ | — |
 | 1 | City | Hà Nội | Vietnam / TP1 | 100.000 |
 | 2 | City | Đà Nẵng | Vietnam / TP2 | 120.000 |
 | 3 | City | TP. Hồ Chí Minh | Vietnam / TP3 | 140.000 |
@@ -81,7 +81,7 @@ CountryCatalog lấy tập TileId từ bảng, không suy đoán quốc gia theo
 | Nhóm trường đề xuất | Ý nghĩa / bất biến |
 |---|---|
 | matchId, revision, matchStatus | Nhận diện trận trong bộ nhớ; revision tăng tại commit; Setup/Running/Finished |
-| setup | Chế độ Human/AI cùng máy, seat/role đã chọn, timeLimit; số người tối thiểu và trùng nghề chờ Q03 |
+| setup | Human/AI cùng máy, seat/role/timeLimit;2–4 người, trùng nghề hợp lệ, ngẫu nhiên người đầu rồi giữ thứ tự ghế |
 | playersById, turnOrder | PlayerState duy nhất và thứ tự ghế ổn định; người phá sản bị bỏ qua khi chọn lượt |
 | propertiesByTileId | Đúng 24 PropertyState; không tạo tài sản cho ô chức năng |
 | turn | actorId, phase, activePersonalTurnOrdinal, lastDice, rollOrdinalWithinTurn, pendingDoubleContinuation |
@@ -89,9 +89,10 @@ CountryCatalog lấy tập TileId từ bảng, không suy đoán quốc gia theo
 | round | roundOrdinal, tập người đã hoàn tất lượt trong vòng, thông tin chờ quyết định Q08; không tính bằng tổng số lần tung |
 | clock | Hữu hạn/vô hạn, remainingTime, timeExpired/endRequested, lý do pause quyết định Human/AI; hết giờ vẫn hoàn tất rootLandingId đang dở |
 | fixedFestivalCityIds | Đúng 3 CityId khác nhau, cố định xuyên suốt trận |
+| organizedFestival | Tối đa một CityId toàn trận, chủ tổ chức và tổng bonus50/100/150%...; không có hạn lượt; tách khỏi fixedFestivalCityIds |
 | cardDrawState | Trình tự/cursor/next card do chính sách Q02 quyết định; dùng cùng nguồn cho rút và xem trước |
-| activeEffects | Nơi lưu DUY NHẤT các EffectState runtime; player/property chỉ query theo source/target |
-| pendingAction, pendingDecision, pendingObligation | Hành động nối tiếp, câu hỏi đang chờ và nghĩa vụ chưa giải quyết; tránh xử lý hai lần |
+| activeEffects | Nơi lưu duy nhất EffectState runtime; có hạn theo lượt nguồn hoặc vòng mới sau khi nguồn phá sản; player/property chỉ query |
+| pendingAction, pendingDecision, pendingObligations | Continuation, câu hỏi và danh sách nghĩa vụ; thẻ10 có batch nhiều payer. Snapshot theo payer chọn đúng PendingObligation, không tạo bản nợ thứ hai |
 | result | WinnerPlayerIds, WinReason; để trống khi chưa kết thúc; nhiều winner khi đồng thắng |
 
 Không lưu song song tổng tài sản, danh sách TP sở hữu, số biển và các tập độc quyền như các nguồn có thể ghi độc lập. Tính từ propertiesByTileId + catalog. Nếu cache để vẽ HUD, cache chỉ đọc, gắn revision và có thể bỏ đi.
@@ -130,7 +131,7 @@ Giới hạn3 lượt là luật mới đã duyệt, thay Word cũ; có thể l�
 
 **Unowned không nằm trong enum cấp nhà.** City chưa chủ có ownerId=null, cityLevel=null, vốn bằng 0; Beach luôn cityLevel=null.
 
-Board logic của A tạo landingId cho mỗi lần dừng; view B chỉ nhận ID. Lưu currentLandingId trong PendingAction/MovementContext; mọi lựa chọn của lần dừng dùng cùng ID. So với mốc đạt Nhà3 để kiểm tra Hotel thường; normalUpgradeUsedOnLandingId bảo đảm một quyết định nâng thường/lần dừng. Q04 đã chốt cửa sổ kỹ năng, còn tiểu mục Q12 chưa được duyệt riêng vẫn PENDING.
+Board logic A tạo landingId cho mỗi lần dừng; view B chỉ nhận ID. Mọi lựa chọn cùng lần dừng dùng cùng landingId. So mốc đạt Nhà3 cho Hotel thường; normalUpgradeUsedOnLandingId chặn nâng thường lần2. Q12 đã duyệt ngoại lệ Active/Ultimate Kỹ Sư lên Hotel cùng lần đến; không dùng marker nâng thường để cấm ngoại lệ kỹ năng.
 
 Giá niêm yết hiện tại được tính từ catalog và cấp, không lấy từ vốn:
 
@@ -149,7 +150,7 @@ Giá niêm yết hiện tại được tính từ catalog và cấp, không lấ
 - Động đất: xóa vốn đúng bậc bị hạ, không hoàn tiền và không phân bổ lại phần còn lại.
 - Bán ngân hàng: 50% tổng vốn thực còn lại. Phá tài sản hợp lệ: hoàn 100% tổng vốn còn lại.
 - Q13 đã duyệt: nghiệp vụ chưa có quy tắc riêng floor số thanh toán cuối; không floor các bước trung gian.
-- Khi chia khoản thực trả cho nhiều bậc, lưu tử/mẫu chính xác của các phần theo tỷ trọng, lấy phần nguyên, xếp phần lẻ giảm dần và phân phối đồng dư; tổng phải bằng số thực trả. Phá hòa theo thứ tự bậc cố định nhưng **hướng thứ tự cụ thể chưa có trong prompt, còn P01**; không tự chọn vector phân bổ chính xác trong test hòa trước xác nhận.
+- Khi chia vốn cho nhiều bậc, dùng tỷ trọng chính xác, lấy phần nguyên rồi phân đồng dư theo phần lẻ giảm dần. **P01 đã duyệt:** phần lẻ bằng nhau ưu tiên Cọc→Nhà1→Nhà2→Nhà3→Hotel; tổng đúng tiền thực trả.103 theo40:20:20:20 → [41,21,21,20,0].
 
 RentQuote đề xuất chứa baseRent, các modifier có nguồn, multiplier, finalRent; chỉ là kết quả query, không phải một số thuê lưu lâu dài. Với City: cộng đại số tỷ lệ trên thuê gốc → nhân đôi nếu hợp lệ → floor kết quả cuối. Thuê Beach gốc: 1/2/3 biển tương ứng 50.000/100.000/150.000. Word xác định biển là BĐS; các modifier thuê BĐS và thẻ Giảm thuê không giới hạn riêng TP, xem D07. Q07 giữ PENDING để truy vết, không chặn lại tình huống đã đủ luật Word.
 
@@ -176,7 +177,7 @@ CardId đề xuất ánh xạ STT GAME_RULES §8, không phải số lượng b�
 | 13 | Cúp điện | Không |
 | 14 | Tặng quà 200.000 | Không |
 
-CardDefinition chứa mô tả, loại giữ, điều kiện mục tiêu và thông số theo luật. Không tự coi 14 loại là bộ bài chỉ có 14 lá, xác suất bằng nhau hoặc bỏ vào đáy sau rút (Q02).
+CardDefinition chứa mô tả, loại giữ, điều kiện mục tiêu và thông số theo luật. Q02 được người dùng duyệt ngày2026-11-19: mỗi lần rút ngẫu nhiên đều14 loại, có hoàn lại; không phải bộ14 lá hữu hạn. Seed và CardDrawOrdinal là chi tiết kỹ thuật để tái lập đúng preview, không tiến ordinal khi query.
 
 HeldCards là set CardId thuộc {3,4,5,8}. Rút trùng loại đang giữ → bỏ thẻ mới. Bảo vệ tự dùng chỉ khi tác động hợp lệ; Miễn thuế/Giảm thuê do người chơi quyết định. CardDrawState phải cho Strategist nhìn đúng lá kế tiếp, không tạo RNG lần hai khi preview.
 
@@ -203,28 +204,30 @@ Một danh sách activeEffects trong GameState; mỗi record đề xuất có ef
 
 Không cần một hệ buff tổng quát có ngôn ngữ biểu thức. Chỉ có các loại cụ thể theo luật:
 
-- TemporaryFestival: +50%, một City của người dùng, 2 lượt riêng tiếp theo; không có hai lễ hội tạm đồng thời trên cùng TP. Gia hạn/thay thế và đổi chủ chờ Q14/Q15.
+- OrganizedFestival (tên biểu diễn đề xuất): một City toàn trận, tách ba festival cố định. Cùng chủ/cùng City mỗi200.000 thêm50% thuê gốc; không hết hạn. Đổi City/người tổ chức thay bằng50%; đổi chủ/bán/phá/về ngân hàng thì xóa. Không giữ TTL2 lượt của TemporaryFestival cũ.
 - PowerOutage: một City đối thủ chưa Hotel, 3 lượt riêng tiếp theo của người dùng; đổi chủ hoặc thành Hotel thì xóa ngay.
-- NextBankPurchaseDiscount: Investor Active thêm 15% cho lần mua ngân hàng tiếp theo, có thể chờ; việc tích nhiều lần chờ Q16.
+- NextBankPurchaseDiscount: Investor Active thêm15% cho lần mua ngân hàng tiếp theo; coupon chưa dùng thì không kích hoạt lại, dù cooldown hết; không tích/ghi đè Q16.
 - RentBoost: Entrepreneur Active +30%,2 lượt riêng theo luật; RentDouble Ultimate dùng expiryMode=BeforeNextSourceTurn và expiresBeforeSourceTurnOrdinal=k+1 khi kích hoạt lượt k. Có hiệu lực ngay, bao gồm đối thủ xen giữa; không dùng EndOfSourceTurn(k+1), không tăng mốc vì đôi.
 - CancelNextRent: Lawyer Active là lựa chọn phản ứng trước chính nghĩa vụ thuê; chỉ áp dụng khi obligation còn dương và chưa dùng biện pháp chủ động khác (Q04/Q06).
-- MandatoryPaymentImmunity: Lawyer Ultimate trong lượt riêng kích hoạt, trừ nợ Banker/phí tự chọn; mục Q18 còn PENDING về phạm vi đã được hỏi trước đó. Không tự mở rộng sang ForcedJailReleaseFee mới (P02).
+- MandatoryPaymentImmunity: Lawyer Ultimate trong lượt kích hoạt, trừ nợ Banker/phí tự chọn. P02 đã duyệt miễn ForcedJailReleaseFee và thả cuối lượt không di chuyển; Q18 quà đã có oracle Word.
 
-Thẻ giữ không biến thành buff theo lượt. Ba lễ hội cố định nằm trong fixedFestivalCityIds, không có thời hạn. Hết hạn effect phải dựa trên chính sourcePlayerId, không dựa vào người vừa tung xúc xắc.
+Thẻ giữ không biến thành buff theo lượt. Ba festival cố định và lễ hội tổ chức toàn cục đều không có TTL lượt nhưng là hai dữ liệu riêng. Effect có hạn theo sourcePlayerId; nếu nguồn phá sản, ghi lại N lượt còn lại rồi giữ qua vòng dở, hết sau N vòng mới hoàn chỉnh tiếp theo. Cần mode/deadline theo vòng riêng; không chờ counter của người đã bị loại tăng lại. Hủy do đổi chủ/Hotel vẫn ưu tiên Q15; không lấy lượt của một người khác thay thế nguồn.
 
 ### 7.4. PendingObligation và PendingDecision
 
 PendingObligation đề xuất: obligationId, sourceKind, payerId, recipientId tùy chọn (null=ngân hàng), assessmentSnapshot, grossAmountNumerator/Denominator, fixedPayableAmount (long sau áp dụng quy tắc), appliedExistingEffects, activeMitigationUsed tùy chọn, stage. Thuế chụp cash/giá niêm yết lúc phát sinh, giữ giá trị chính xác tới số thanh toán cuối theo Q13; không floor thuế gốc rồi floor tiếp phần giảm, không tính lại sau thanh lý.
 
-Q06: activeMitigationUsed tối đa một lựa chọn thành công cho obligationId. Áp hiệu lực sẵn có trước; nếu payable bằng0 thì khóa mọi lựa chọn tiêu thêm. Cards/Skills chỉ trả ý định; Core ghi nghĩa vụ, tiền và tiêu hao cùng một kết quả hợp lệ. ForcedJailReleaseFee là loại bắt buộc mới, số200.000 cố định, có continuation thả cuối lượt; chính sách miễn/thả còn P02.
+Q06: activeMitigationUsed tối đa một lựa chọn thành công/obligation. Áp hiệu lực sẵn có trước; payable0 khóa tiêu thêm. Cards/Skills trả ý định; Core ghi tiền và tiêu hao cùng một kết quả hợp lệ. ForcedJailReleaseFee200.000 có continuation thả cuối lượt; P02 cho Lawyer Ultimate miễn và vẫn thả, không di chuyển.
 
 Các stage kỹ thuật: AwaitMitigationDecision, AwaitLiquidation, ReadyToSettle, Settled/Cancelled. Không trừ tiền hai lần khi popup/callback lặp. Tiền thiếu không biến cash thành số âm. Nếu phải phá sản, chuyển số tiền thực còn lại cho người nhận nếu có; phần thiếu không truy thu.
 
 PendingDecision đề xuất: decisionId, actorId, actionId, rootLandingId, expectedRevision, decisionKind, validTargets/options, requiresClockPause. Popup chờ quyết định pause cho Human/AI như nhau theo Q20. actorId của quyết định có thể khác người đang có lượt khi phải thanh lý cho thẻ chuyển tiền.
 
-PendingAction đề xuất có actionId, rootLandingId, sourceKind, continuationKind, currentStep, remainingParticipants, settledParticipantIds, relatedDecisionIds, allowedContinuationKinds. Phân biệt một giao dịch với toàn bộ chuỗi lần dừng; Q20 giữ chuỗi đang dở sau hết giờ nhưng từ chối lệnh chủ động mới không liên quan. Thứ tự các người trả còn Q19 PENDING; việc lưu ai đã trả không cần chờ quyết định thứ tự.
+PendingAction đề xuất có actionId, rootLandingId, sourceKind, continuationKind, currentStep, remainingParticipants, settledParticipantIds và relatedDecisionIds. Q19 thẻ10 tạo đồng thời nghĩa vụ cho mọi đối thủ; đủ tiền tự trả ngay, người thiếu cùng chờ. Lưu ai đã giải quyết để không thu lại; QuerySnapshot(payerId)/QueryLegalActions(payerId) dùng nghĩa vụ của đúng người, không tăng lượt riêng khi thanh toán ngoài lượt. Q20 giữ chuỗi sau hết giờ, chặn lệnh mới không liên quan.
 
-MovementContext đề xuất: movementId, landingId, rootLandingId, sourceKind, fromTileId, destinationTileId, đường đi, số lần qua0, diceResult tùy chọn, consumedRollEntitlementId tùy chọn, teleportOperationId tùy chọn, presentationPending. Strategist Ultimate không ghi kết quả đôi. Vào tù hủy quyền gieo thêm theo Q11; nhánh buộc thả cuối lượt3 không tạo MovementContext. Đường đi đặc biệt chưa rõ vẫn chờ Q10.
+MovementContext đề xuất: movementId, landingId, rootLandingId, sourceKind, from/destinationTileId, path, số lần qua0, diceResult tùy chọn, consumedRollEntitlementId, teleportOperationId và presentationPending. Q10: thẻ tới8/24 và dịch vụ đi tiến, có thưởng qua0; dịch vụ không chọn24, thẻ đưa lại24 được dùng tiếp. Không đặt cờ khóa toàn root. Strategist Ultimate không tạo đôi; thử tù có pending roll/jail-trial flag để gieo lại trước kết quả cuối. Q11 hủy gieo thêm khi bị bắt; thả cuối lượt3/P02 không tạo movement.
+
+Số lần qua ô 0 tính cả khi ô 0 là điểm dừng của hành trình hợp lệ. Core cộng 200.000 cho mỗi lần được tính. Phí dịch chuyển 100.000 là khoản riêng.
 
 EndTurnContext đề xuất lưu closingPersonalTurnOrdinal, pendingDueObligationIds, deadlineSettlementCompleted, countersUpdated, roundInterestApplied để Q09 chỉ chạy mỗi bước một lần sau popup/callback. Khi đã có thắng tức thời thì không chạy các bước không cần thiết. Mốc BeforeNextSourceTurn của RentDouble được kiểm tra ngay trước bắt đầu lượt chủ, độc lập các effect hết cuối lượt.
 
@@ -257,7 +260,7 @@ Giá trị số của enum mới chưa được nhóm chốt, ngoại trừ Tile
 - BoardCatalog: vị trí/loại/tên/quốc gia/mã hiển thị và các giá tham chiếu của bảng.
 - PropertyRulesCatalog: tỷ lệ cấp, thuê, phí, tỷ lệ hoàn vốn; không lặp giá từng TP.
 - RoleCatalog/SkillCatalog: ID, mô tả, cooldown và thông số sáu nghề; một bộ dữ liệu chuẩn.
-- CardCatalog: 14 định nghĩa thẻ; không chứa pile runtime hoặc chính sách rút chưa chốt.
+- CardCatalog: 14 định nghĩa thẻ; không chứa runtime thẻ giữ. Q02 đã chốt rút đều có hoàn lại; provider giữ preview nhất quán theo ordinal do Core sở hữu.
 - Tham chiếu Sprite/AudioClip nếu cần chỉ nằm ở SO/presentation; plain C# runtime dùng ID/catalog đã chuyển đổi, không phụ thuộc UnityEngine.Object.
 
 Kiểm tra dữ liệu trước khi tạo trận: 32 ô khác ID; đúng 20 City + 4 Beach + 8 chức năng; đủ 8 nhóm quốc gia; giá theo bảng; 6 role; 14 card; 4 loại giữ; không TP17 giả; đủ quan hệ ID. Kiểm tra runtime: chủ hợp lệ, cấp/vốn đúng loại, effect có source/target hợp lệ, ba festival khác nhau, không state mutable trong SO.

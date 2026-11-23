@@ -1,7 +1,7 @@
 {
   "name": "BtlGame.Gameplay",
   "rootNamespace": "BtlGame",
-  "references": [],
+  "references": ["Unity.TextMeshPro", "Unity.ugui"],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

@@ -195,7 +195,7 @@ namespace BtlGame.Tests
         }
 
         [Test]
-        public void P02PreservesThirdJailRollAndBlocksTheUnresolvedBranch()
+        public void PotentialImmunityHintDoesNotWaiveTheThirdJailFeeWithoutAnActiveEffect()
         {
             var a = new PlayerState(1, 0, "A");
             var b = new PlayerState(2, 1, "B");
@@ -220,9 +220,9 @@ namespace BtlGame.Tests
             DiceRoll thirdAttempt = coordinator.ChooseJailRoll(a.Id, lawyerUltimateCouldMitigateForcedFee: true);
 
             Assert.That(thirdAttempt.IsDouble, Is.False);
-            Assert.That(coordinator.State.PendingRuleDecisionId, Is.EqualTo("P02"));
-            Assert.That(coordinator.State.Phase, Is.EqualTo(TurnPhase.AwaitingRuleDecision));
-            Assert.That(coordinator.State.PendingObligation, Is.Null);
+            Assert.That(coordinator.State.PendingRuleDecisionId, Is.Null);
+            Assert.That(coordinator.State.Phase, Is.EqualTo(TurnPhase.AwaitingObligation));
+            Assert.That(coordinator.State.PendingObligation.PayableAmount, Is.EqualTo(200000));
             Assert.Throws<InvalidOperationException>(() => coordinator.RollAndMove(a.Id));
         }
 
