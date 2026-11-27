@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BTLGame.UI;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,6 +29,10 @@ namespace BTLGame.Presentation
         public event Action<DecisionSubmission> Submitted;
 
         private DecisionPrompt _current;
+        private readonly List<Button> _dynamicButtons = new List<Button>();
+        private readonly List<Text> _dynamicLabels = new List<Text>();
+        private int _serializedButtonCount = -1;
+        private int _serializedLabelCount = -1;
 
         public long CurrentDecisionId => _current == null ? 0 : _current.DecisionId;
 
@@ -42,11 +47,9 @@ namespace BTLGame.Presentation
             if (_title != null) { _title.text = prompt.Title; FitTitle(); }
             if (_message != null) _message.text = prompt.Message;
 
+            ClearDynamicOptions();
+            EnsureOptionSlots(prompt.Options.Count);
             int count = Mathf.Min(prompt.Options.Count, _optionButtons.Length);
-            if (prompt.Options.Count > _optionButtons.Length)
-            {
-                Debug.LogWarning("DecisionPopupView: có " + prompt.Options.Count + " lựa chọn nhưng chỉ hiển thị " + _optionButtons.Length + ".", this);
-            }
 
             for (int i = 0; i < _optionButtons.Length; i++)
             {
@@ -156,6 +159,77 @@ namespace BTLGame.Presentation
 
             var p = _current;
             Submitted?.Invoke(new DecisionSubmission(p.DecisionId, p.ActorId, p.ExpectedRevision, p.ActionId, p.Kind, p.ContextId, optionId));
+        }
+
+        private void EnsureOptionSlots(int requiredCount)
+        {
+            if (_serializedButtonCount < 0)
+            {
+                _serializedButtonCount = _optionButtons?.Length ?? 0;
+                _serializedLabelCount = _optionLabels?.Length ?? 0;
+            }
+            if (requiredCount <= _optionButtons.Length || _serializedButtonCount == 0)
+            {
+                return;
+            }
+
+            Button template = _serializedButtonCount > 0 ? _optionButtons[0] : null;
+            Transform parent = _scroll != null && _scroll.content != null
+                ? _scroll.content
+                : template != null ? template.transform.parent : null;
+            if (template == null || parent == null)
+            {
+                return;
+            }
+
+            var buttons = new List<Button>(_optionButtons);
+            var labels = new List<Text>(_optionLabels);
+            while (buttons.Count < requiredCount)
+            {
+                Button clone = Instantiate(template, parent);
+                clone.onClick.RemoveAllListeners();
+                clone.gameObject.SetActive(false);
+                Text cloneLabel = clone.GetComponentInChildren<Text>(true);
+                if (cloneLabel != null)
+                {
+                    cloneLabel.text = string.Empty;
+                }
+                buttons.Add(clone);
+                labels.Add(cloneLabel);
+                _dynamicButtons.Add(clone);
+                _dynamicLabels.Add(cloneLabel);
+            }
+            _optionButtons = buttons.ToArray();
+            _optionLabels = labels.ToArray();
+        }
+
+        private void ClearDynamicOptions()
+        {
+            if (_serializedButtonCount < 0)
+            {
+                return;
+            }
+            foreach (Button button in _dynamicButtons)
+            {
+                if (button != null)
+                {
+                    Destroy(button.gameObject);
+                }
+            }
+            _dynamicButtons.Clear();
+            _dynamicLabels.Clear();
+            if (_optionButtons.Length > _serializedButtonCount)
+            {
+                var buttons = new Button[_serializedButtonCount];
+                Array.Copy(_optionButtons, buttons, _serializedButtonCount);
+                _optionButtons = buttons;
+            }
+            if (_optionLabels.Length > _serializedLabelCount)
+            {
+                var labels = new Text[_serializedLabelCount];
+                Array.Copy(_optionLabels, labels, _serializedLabelCount);
+                _optionLabels = labels;
+            }
         }
     }
 }

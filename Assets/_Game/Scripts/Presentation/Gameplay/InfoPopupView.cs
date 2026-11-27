@@ -47,7 +47,6 @@ namespace BTLGame.Presentation
                         if (i > 0) sb.Append('\n');
                         sb.Append(lines[i]);
                     }
-
                     _body.text = sb.ToString();
                 }
             }
