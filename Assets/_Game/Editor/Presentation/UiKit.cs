@@ -551,6 +551,7 @@ namespace BTLGame.EditorTools
 
             var t = NewText("Title", header.transform, title, Black, 52, Color.white, TextAnchor.MiddleCenter, new Vector2(titleX, 4f), new Vector2(titleW, 90f));
             t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Truncate;   // bắt buộc để best-fit co chữ thay vì tràn khỏi tab
             t.resizeTextForBestFit = true;
             t.resizeTextMinSize = 24;
             t.resizeTextMaxSize = 52;

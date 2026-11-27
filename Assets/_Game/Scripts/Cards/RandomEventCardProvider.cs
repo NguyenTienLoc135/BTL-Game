@@ -34,6 +34,10 @@ namespace BTLGame.Cards
             throw new ArgumentException("Lựa chọn thẻ không còn hợp lệ.", nameof(choiceId));
         }
 
+        private static string LevelName(PropertyLevel? level)
+            => level == PropertyLevel.Stake ? "Cọc" : level == PropertyLevel.House1 ? "Nhà 1" : level == PropertyLevel.House2 ? "Nhà 2"
+                : level == PropertyLevel.House3 ? "Nhà 3" : level == PropertyLevel.Hotel ? "Khách sạn" : "—";
+
         private static List<(CardActionOption Option, CardEffectPlan Plan)> BuildChoices(GameSnapshot snapshot, int actorId)
         {
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
@@ -49,7 +53,7 @@ namespace BTLGame.Cards
             {
                 case 1: Add(1, "Nhận 300.000đ", CardEffectKind.BankCredit, amount: 300000); break;
                 case 3: case 4: case 5: case 8:
-                    Add(1, "Nhận thẻ (đang giữ cùng loại thì bỏ lá mới)", CardEffectKind.StoreCard); break;
+                    Add(1, "Nhận thẻ", CardEffectKind.StoreCard); break;
                 case 6: Add(1, "Xác nhận nghĩa vụ thuế", CardEffectKind.Tax); break;
                 case 7: Add(1, "Đi tiến đến Nhà tù", CardEffectKind.SendJail); break;
                 case 11: Add(1, "Đi tiến đến ô Dịch chuyển", CardEffectKind.GoTeleport); break;
@@ -61,7 +65,12 @@ namespace BTLGame.Cards
                         if (BoardCatalog.Get(property.TileId).Kind != TileKind.City || !property.OwnerId.HasValue ||
                             property.OwnerId == actorId || property.Level == PropertyLevel.Hotel ||
                             (card == 2 && property.Level == PropertyLevel.Stake)) continue;
-                        Add(property.TileId + 1, BoardCatalog.Get(property.TileId).Name, attack, tile: property.TileId);
+                        // Nút phải nói rõ SẼ LÀM GÌ với thành phố nào, của ai (không chỉ mỗi tên thành phố).
+                        string verb = card == 2 ? "Hạ 1 cấp công trình" : card == 9 ? "Phá tài sản" : "Cúp điện";
+                        string owner = string.Empty;
+                        foreach (PlayerSnapshot other in snapshot.Players) if (other.Id == property.OwnerId) owner = other.DisplayName;
+                        Add(property.TileId + 1, verb + " ở " + BoardCatalog.Get(property.TileId).Name + " (của " + owner + ", " + LevelName(property.Level) + ")",
+                            attack, tile: property.TileId);
                     }
                     if (result.Count == 0) Add(0, "Không có mục tiêu hợp lệ — tiếp tục", CardEffectKind.None);
                     break;

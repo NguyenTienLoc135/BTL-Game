@@ -150,13 +150,7 @@ namespace BTLGame.EditorTools
             var modePopup = BuildModePopup(c, out var botButton, out var humanButton);
             var botSetup = MatchSetupBuilder.Build(c, MainMenuMode.VsBot);
             var humanSetup = MatchSetupBuilder.Build(c, MainMenuMode.VsHuman);
-            var howToPopup = BuildTextPopup(c, "Popup_HowTo", "Hướng dẫn nhanh",
-                "• Mỗi người bắt đầu với 300.000, đi qua hoặc dừng ở ô Xuất phát nhận 200.000.\n" +
-                "• Tung hai xúc xắc; ra đôi được tung tiếp trong cùng lượt.\n" +
-                "• Mua thành phố, nâng cấp để thu thuê từ đối thủ.\n" +
-                "• Độc quyền trọn 3 nước hoặc sở hữu cả 4 bãi biển sẽ thắng ngay.\n" +
-                "• Hết tiền và không còn tài sản để bán sẽ phá sản.\n\n" +
-                "(Nội dung tạm thời — nhóm UI sẽ thay bằng trang hướng dẫn đầy đủ.)", 32);
+            var howToPopup = BuildGuidePopup(c);
             var aboutPopup = BuildTextPopup(c, "Popup_About", "Về trò chơi",
                 "Cờ Tỷ Phú RPG\n" +
                 "Board game chiến thuật theo lượt, bàn cờ 3D low poly 32 ô, tối đa 4 người (Bot hoặc nhiều người cùng một máy).\n\n" +
@@ -217,6 +211,55 @@ namespace BTLGame.EditorTools
             t.resizeTextMinSize = 26;
             t.resizeTextMaxSize = 44;
             return button;
+        }
+
+        /// <summary>Popup Hướng dẫn: nội dung dài theo docs, cuộn được bằng chuột (con lăn, kéo hoặc thanh cuộn).</summary>
+        private static UiPopup BuildGuidePopup(Transform canvas)
+        {
+            var parts = Popup(canvas, "Popup_HowTo", "Hướng dẫn chơi", new Vector2(1300f, 920f));
+
+            var scrollRt = NewRect("GuideScroll", parts.Inner, new Vector2(-24f, -4f), new Vector2(1140f, 780f));
+            var scroll = scrollRt.gameObject.AddComponent<ScrollRect>();
+            var viewport = NewImage("Viewport", scrollRt, null, new Color(1f, 1f, 1f, 0.001f), Vector2.zero, Vector2.zero);
+            Stretch(viewport.rectTransform);
+            viewport.raycastTarget = true;   // để nhận kéo/con lăn
+            viewport.gameObject.AddComponent<RectMask2D>();
+
+            var body = NewText("Body", viewport.transform, GuideText.Body, Regular, 28, TextDark, TextAnchor.UpperLeft, Vector2.zero, Vector2.zero);
+            var content = body.rectTransform;
+            content.anchorMin = new Vector2(0f, 1f);
+            content.anchorMax = new Vector2(1f, 1f);
+            content.pivot = new Vector2(0.5f, 1f);
+            content.anchoredPosition = Vector2.zero;
+            content.sizeDelta = new Vector2(-24f, 0f);
+            body.supportRichText = true;
+            body.lineSpacing = 1.05f;
+            body.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scroll.viewport = viewport.rectTransform;
+            scroll.content = content;
+            scroll.horizontal = false;
+            scroll.vertical = true;
+            scroll.movementType = ScrollRect.MovementType.Clamped;
+            scroll.scrollSensitivity = 45f;
+
+            // Thanh cuộn dọc bên phải: kéo được và luôn hiện để biết còn nội dung.
+            var track = NewImage("Scrollbar", parts.Inner, BtnGrey, new Color(0.82f, 0.82f, 0.9f), new Vector2(592f, -4f), new Vector2(34f, 780f));
+            var area = NewRect("SlidingArea", track.transform, Vector2.zero, Vector2.zero);
+            Stretch(area);
+            area.offsetMin = new Vector2(3f, 3f);
+            area.offsetMax = new Vector2(-3f, -3f);
+            var handle = NewImage("Handle", area, BtnBlue, Navy, Vector2.zero, Vector2.zero);
+            Stretch(handle.rectTransform);
+            handle.raycastTarget = true;
+            var bar = track.gameObject.AddComponent<Scrollbar>();
+            bar.handleRect = handle.rectTransform;
+            bar.targetGraphic = handle;
+            bar.direction = Scrollbar.Direction.BottomToTop;
+            track.raycastTarget = true;
+            scroll.verticalScrollbar = bar;
+            scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+            return parts.Popup;
         }
 
         private static UiPopup BuildTextPopup(Transform canvas, string name, string title, string body, int fontSize)

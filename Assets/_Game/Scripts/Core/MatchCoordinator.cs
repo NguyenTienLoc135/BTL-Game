@@ -620,9 +620,9 @@ namespace BtlGame.Core
             PropertyState property = State.GetProperty(tileId);
             TileDefinition tile = BoardCatalog.Get(tileId);
             if (tile.Kind != TileKind.City || !property.OwnerId.HasValue || property.OwnerId == buyerId || !property.Level.HasValue)
-                throw new InvalidOperationException("Ô không đủ điều kiện cưỡng chế.");
+                throw new InvalidOperationException("Ô không đủ điều kiện mua lại.");
             if (property.Level == PropertyLevel.Hotel)
-                throw new InvalidOperationException("Không thể cưỡng chế Khách sạn.");
+                throw new InvalidOperationException("Không thể mua lại Khách sạn.");
             EnsureOwnershipChangeAllowed(tileId);
             if (purchaseBasisPoints != 15_000 && purchaseBasisPoints != NormalForcedPurchaseBasisPoints(buyer))
                 throw new ArgumentOutOfRangeException(nameof(purchaseBasisPoints));
@@ -632,17 +632,17 @@ namespace BtlGame.Core
             if (purchaseBasisPoints == 15_000 && !authorizedRemote)
                 throw new InvalidOperationException("Giá mua từ xa cần intent Ultimate hợp lệ.");
             if (authorizedRemote && purchaseBasisPoints != 15_000)
-                throw new InvalidOperationException("Cưỡng chế từ xa dùng mức giá 150%.");
+                throw new InvalidOperationException("Mua lại từ xa dùng mức giá 150%.");
             if (!authorizedRemote) EnsureStandingOn(buyerId, tileId);
             if (!authorizedRemote && State.RentSettledAtCurrentLandingTileId != tileId)
-                throw new InvalidOperationException("Phải giải quyết tiền thuê trước khi cưỡng chế thường.");
+                throw new InvalidOperationException("Phải giải quyết tiền thuê trước khi mua lại thường.");
             if ((!authorizedRemote && State.Phase != TurnPhase.ResolvingLanding) ||
                 (authorizedRemote && State.Phase != TurnPhase.AwaitingRoll && State.Phase != TurnPhase.ResolvingLanding &&
                     State.Phase != TurnPhase.EndTurn && State.Phase != TurnPhase.AwaitingJailChoice))
-                throw new InvalidOperationException("Cưỡng chế chỉ tiếp tục trong lần dừng đang xử lý.");
+                throw new InvalidOperationException("Mua lại chỉ tiếp tục trong lần dừng đang xử lý.");
 
             long cost = new MoneyFraction(checked(EconomyRules.ListedPrice(tileId, property.Level.Value) * purchaseBasisPoints), 10_000).FloorToLong();
-            if (buyer.Cash < cost) throw new InvalidOperationException("Không đủ tiền cưỡng chế.");
+            if (buyer.Cash < cost) throw new InvalidOperationException("Không đủ tiền mua lại.");
             var investments = EconomyRules.AllocateInvestment(cost, property.Level.Value, State.Decisions.InvestmentTieBreak);
             PlayerState formerOwner = State.GetPlayer(property.OwnerId.Value);
             long formerOwnerCash = checked(formerOwner.Cash + cost);

@@ -54,12 +54,16 @@ namespace BTLGame.Board
         public long LandingId { get; }
         public IReadOnlyList<int> Path { get; }
 
-        public MovementPresentation(int playerId, long actionId, long landingId, IReadOnlyList<int> path)
+        /// <summary>true: bay thẳng một vòng cung tới ô cuối (dịch chuyển) thay vì nhảy từng ô.</summary>
+        public bool Fly { get; }
+
+        public MovementPresentation(int playerId, long actionId, long landingId, IReadOnlyList<int> path, bool fly = false)
         {
             PlayerId = playerId;
             ActionId = actionId;
             LandingId = landingId;
             Path = path ?? throw new ArgumentNullException(nameof(path));
+            Fly = fly;
         }
     }
 }
