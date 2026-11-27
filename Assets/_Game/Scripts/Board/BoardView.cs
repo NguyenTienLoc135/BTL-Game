@@ -23,6 +23,8 @@ namespace BTLGame.Board
         [SerializeField, Min(0.05f)] private float _tokenSpread = 0.22f; // khoảng lệch giữa các quân trên cùng một ô
 
         private readonly Dictionary<int, PlayerTokenView> _tokensByPlayerId = new Dictionary<int, PlayerTokenView>();
+        private readonly Dictionary<int, int> _seatTiles = new Dictionary<int, int>();   // ghế đang hiện -> ô (để dàn quân cùng ô)
+        [SerializeField, Min(0f)] private float _tokenDown = 0.22f;      // quân tụt về phía đáy so với tâm ô
         private bool _animating;
         private bool _hasCompletedAction;
         private long _lastCompletedActionId;
@@ -63,6 +65,10 @@ namespace BTLGame.Board
                 tile.SetLevel(null);
             }
 
+            _seatTiles.Clear();
+            foreach (BoardPlayerVisualState player in snapshot.Players)
+                if (player.IsVisible) _seatTiles[player.SeatIndex] = player.TileId;
+
             foreach (BoardPlayerVisualState player in snapshot.Players)
             {
                 if (player.PlayerId < 0 || player.SeatIndex < 0 || player.SeatIndex >= _tokens.Length ||
@@ -100,6 +106,14 @@ namespace BTLGame.Board
 
         public void HighlightTile(int tileId, bool highlighted) => GetTile(tileId).SetHighlighted(highlighted);
 
+        /// <summary>Hiện dấu lễ hội đúng trên các ô được chọn (3 thành phố cố định của trận), ẩn ở ô khác.</summary>
+        public void ShowFestivalTiles(IReadOnlyList<int> tileIds)
+        {
+            ValidateBindings();
+            var chosen = new HashSet<int>(tileIds);
+            for (int id = 0; id < _tiles.Length; id++) GetTile(id).SetFestival(chosen.Contains(id));
+        }
+
         public static Vector3 GetTilePosition(int tileId)
         {
             if (tileId < 0 || tileId >= 32) throw new ArgumentOutOfRangeException(nameof(tileId));
@@ -114,19 +128,27 @@ namespace BTLGame.Board
         }
 
         /// <summary>
-        /// Vị trí thế giới của quân ở ghế seatIndex trên ô tileId, tính từ vị trí THẬT của tile trong Scene
-        /// (không giả định lưới cố định) nên dùng được cho mọi bố cục bàn cờ. Hướng "vào trong" = về tâm bàn cờ.
+        /// Vị trí quân trên ô: giữa ô nhưng hơi tụt về phía đáy màn (-z, phía camera). Một quân đứng chính giữa theo chiều ngang;
+        /// nhiều quân cùng ô thì dàn cạnh nhau (2) hoặc thành lưới 2×2 (3–4) quanh điểm đó, vẫn nằm trong ô.
         /// </summary>
         private Vector3 PlayerWorldPosition(int seatIndex, int tileId)
         {
             Vector3 tile = GetTile(tileId).transform.position;
-            Vector3 inward = transform.position - tile;
-            inward.y = 0f;
-            inward = inward.sqrMagnitude > 0.0001f ? inward.normalized : Vector3.forward;
-            Vector3 side = Vector3.Cross(Vector3.up, inward).normalized;
-            float sideOffset = (seatIndex % 2 == 0 ? -1f : 1f) * _tokenSpread;
-            float inwardOffset = (seatIndex < 2 ? -1f : 1f) * _tokenSpread * 0.9f;
-            return tile + side * sideOffset + inward * inwardOffset + Vector3.up * _tokenLift;
+            int count = 1;
+            int order = 0;
+            foreach (KeyValuePair<int, int> other in _seatTiles)
+            {
+                if (other.Key == seatIndex || other.Value != tileId) continue;
+                count++;
+                if (other.Key < seatIndex) order++;
+            }
+
+            float x = 0f;
+            float z = 0f;
+            if (count > 1) x = (order % 2 == 0 ? -1f : 1f) * _tokenSpread;
+            if (count > 2) z = (order < 2 ? 1f : -1f) * _tokenSpread * 0.5f;
+            if (count == 3 && order == 2) x = 0f;
+            return tile + new Vector3(x, _tokenLift, z - _tokenDown);
         }
 
         public static Vector3 GetPlayerPosition(int seatIndex, int tileId)
@@ -148,9 +170,34 @@ namespace BTLGame.Board
         private IEnumerator Animate(PlayerTokenView token, MovementPresentation movement)
         {
             _animating = true;
+            if (movement.Fly)
+            {
+                // Dịch chuyển: một đường bay vòng cung từ ô hiện tại tới ô đích.
+                int target = movement.Path[movement.Path.Count - 1];
+                Vector3 start = token.transform.position;
+                _seatTiles[token.SeatIndex] = target;
+                Vector3 end = PlayerWorldPosition(token.SeatIndex, target);
+                const float flightSeconds = 1.3f;
+                float flown = 0f;
+                while (flown < flightSeconds)
+                {
+                    flown += Time.deltaTime;
+                    float t = Mathf.Clamp01(flown / flightSeconds);
+                    float eased = t * t * (3f - 2f * t);
+                    token.SetPosition(Vector3.LerpUnclamped(start, end, eased) + Vector3.up * (Mathf.Sin(t * Mathf.PI) * 3.5f));
+                    token.SetMovingPose(0f, eased);
+                    yield return null;
+                }
+
+                token.SetPosition(end);
+                token.SetMovingPose(0f, 0f);
+                Stepped?.Invoke(target);
+            }
+            else
             for (int i = 0; i < movement.Path.Count; i++)
             {
                 Vector3 from = token.transform.position;
+                _seatTiles[token.SeatIndex] = movement.Path[i];
                 Vector3 to = PlayerWorldPosition(token.SeatIndex, movement.Path[i]);
                 float elapsed = 0f;
                 while (elapsed < _stepDuration)

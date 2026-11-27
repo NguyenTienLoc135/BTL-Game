@@ -105,7 +105,7 @@ namespace BTLGame.EditorTools
             cam.orthographic = false;
             cam.fieldOfView = 32f;
             cam.transform.position = new Vector3(0f, 27f, -25f);
-            cam.transform.LookAt(new Vector3(0f, 0f, -1f));
+            cam.transform.LookAt(new Vector3(0f, 0f, -2.8f)); // nhìn thấp hơn → bàn cờ nằm cao hơn, chừa chỗ cho cụm xúc xắc ở đáy màn
 
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.8f, 0.84f, 0.92f);
@@ -150,18 +150,20 @@ namespace BTLGame.EditorTools
             AddMenuBars(menu.transform);
 
             // --- Xúc xắc + nút Xúc xắc (dưới giữa)
-            var dicePanel = NewImage("DicePanel", hc, BtnBlue, NavyDeep, new Vector2(-190f, -450f), new Vector2(290f, 120f));
+            var dicePanel = NewImage("DicePanel", hc, BtnBlue, NavyDeep, new Vector2(-150f, -482f), new Vector2(210f, 84f));
             var faces = new Sprite[6];
             for (int i = 0; i < 6; i++) faces[i] = Icon("dice_" + (i + 1));
-            var dieA = NewImage("DieA", dicePanel.transform, faces[2], Color.white, new Vector2(-70f, 3f), new Vector2(86f, 86f));
-            var dieB = NewImage("DieB", dicePanel.transform, faces[4], Color.white, new Vector2(70f, 3f), new Vector2(86f, 86f));
+            var dieA = NewImage("DieA", dicePanel.transform, faces[2], Color.white, new Vector2(-50f, 2f), new Vector2(60f, 60f));
+            var dieB = NewImage("DieB", dicePanel.transform, faces[4], Color.white, new Vector2(50f, 2f), new Vector2(60f, 60f));
             dieA.raycastTarget = false;
             dieB.raycastTarget = false;
-            var roll = PrimaryButton(hc, "Btn_Roll", "Xúc xắc", new Vector2(130f, -450f), new Vector2(290f, 112f), 44);
+            var roll = PrimaryButton(hc, "Btn_Roll", "Xúc xắc", new Vector2(120f, -482f), new Vector2(300f, 84f), 30);
+            FitSingleLine(roll.GetComponentInChildren<Text>(), 18, 30);   // "KẾT THÚC LƯỢT" một dòng
 
             // --- Màn chúc mừng MONOPOLY (dựng trước popup để popup quyết định luôn nằm trên)
             var diceOverlay = DiceResultOverlayBuilder.Build(c);
             var celebration = MonopolyCelebrationBuilder.Build(c);
+            BuildTeleportPicker(c);
 
             // --- Popup: tạm dừng + cài đặt (cùng khung với MainMenu)
             var pause = Popup(c, "Popup_Pause", "Tạm dừng", new Vector2(900f, 620f));
@@ -251,6 +253,31 @@ namespace BTLGame.EditorTools
         private const int MaxDecisionOptions = 24;
 
         /// <summary>Popup quyết định: tiêu đề + nội dung + danh sách lựa chọn cuộn được (tối đa 24, đủ cho danh sách tài sản khi thanh lý).</summary>
+        /// <summary>Dải nhỏ phía trên cho chế độ chọn ô dịch chuyển (không che bàn cờ) + TeleportPicker.</summary>
+        private static void BuildTeleportPicker(Transform canvas)
+        {
+            var go = new GameObject("TeleportPicker", typeof(RectTransform));
+            go.transform.SetParent(canvas, false);
+            var picker = go.AddComponent<TeleportPicker>();
+
+            var banner = NewImage("TeleportBanner", canvas, BtnBlue, NavyDeep, new Vector2(0f, -20f), new Vector2(760f, 160f));
+            var message = NewText("Message", banner.transform, string.Empty, Bold, 28, Color.white, TextAnchor.MiddleCenter, new Vector2(0f, 36f), new Vector2(720f, 60f));
+            message.resizeTextForBestFit = true;
+            message.resizeTextMinSize = 16;
+            message.resizeTextMaxSize = 28;
+            message.verticalOverflow = VerticalWrapMode.Truncate;
+            var skip = PrimaryButton(banner.transform, "Btn_TeleportSkip", "Bỏ qua", new Vector2(-170f, -38f), new Vector2(300f, 70f), 28);
+            var other = SecondaryButton(banner.transform, "Btn_TeleportOther", "Hành động khác", new Vector2(170f, -38f), new Vector2(320f, 70f), 26);
+
+            var so = new SerializedObject(picker);
+            so.FindProperty("_banner").objectReferenceValue = banner.gameObject;
+            so.FindProperty("_message").objectReferenceValue = message;
+            so.FindProperty("_skipButton").objectReferenceValue = skip;
+            so.FindProperty("_otherButton").objectReferenceValue = other;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            banner.gameObject.SetActive(false);
+        }
+
         private static DecisionPopupView BuildDecisionPopup(Transform canvas)
         {
             var parts = Popup(canvas, "Popup_Decision", "Chọn hành động", new Vector2(1100f, 900f), null, false);
@@ -300,6 +327,12 @@ namespace BTLGame.EditorTools
                 le.preferredHeight = 72f;
                 buttons[i] = b;
                 labels[i] = b.GetComponentInChildren<Text>();
+                // Nhãn giãn theo nút (không cố định 876px) để chữ dài tự xuống dòng; DecisionPopupView tăng chiều cao nút cho vừa chữ.
+                var labelRt = labels[i].rectTransform;
+                labelRt.anchorMin = Vector2.zero;
+                labelRt.anchorMax = Vector2.one;
+                labelRt.offsetMin = new Vector2(DecisionPopupView.LabelPaddingX, DecisionPopupView.LabelPaddingBottom);
+                labelRt.offsetMax = new Vector2(-DecisionPopupView.LabelPaddingX, -DecisionPopupView.LabelPaddingTop);
                 b.gameObject.SetActive(false);
             }
 

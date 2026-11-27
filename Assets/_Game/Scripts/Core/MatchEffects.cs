@@ -62,7 +62,7 @@ namespace BtlGame.Core
             if (!State.Decisions.TeleportOncePerChain.HasValue) blocks.Add("Q10: lặp dịch vụ trong chuỗi.");
             if (State.Decisions.RemoveEffectsWhenSourceBankrupt == false && !State.Decisions.KeepOrphanEffectsThroughCurrentRound.HasValue)
                 blocks.Add("Q17: mốc hết hạn thay thế khi nguồn bị loại.");
-            if (!State.Decisions.EntrepreneurForcedPurchaseBasisPoints.HasValue) blocks.Add("Điểm yếu Doanh Nhân khi cưỡng chế.");
+            if (!State.Decisions.EntrepreneurForcedPurchaseBasisPoints.HasValue) blocks.Add("Điểm yếu Doanh Nhân khi mua lại.");
             if (!State.GiftBatchActive && State.PendingCardId.HasValue && QueryCardActions(State.GetPlayer(State.CurrentPlayerId)).Count == 0)
                 blocks.Add("C_CARD_NO_VALID_OPTION: kiểm tra policy hoặc ý định do module C cấp.");
             return blocks.AsReadOnly();

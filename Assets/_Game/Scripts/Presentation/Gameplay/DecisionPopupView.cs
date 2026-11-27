@@ -13,6 +13,12 @@ namespace BTLGame.Presentation
     /// </summary>
     public sealed class DecisionPopupView : MonoBehaviour
     {
+        /// <summary>Chiều cao tối thiểu của nút lựa chọn và lề quanh chữ (nút cao thêm khi chữ nhiều dòng).</summary>
+        public const float MinOptionHeight = 72f;
+        public const float LabelPaddingX = 24f;
+        public const float LabelPaddingTop = 8f;
+        public const float LabelPaddingBottom = 14f;   // nút Kenney có viền đáy dày hơn
+
         [SerializeField] private UiPopup _popup;
         [SerializeField] private Text _title;
         [SerializeField] private Text _message;
@@ -38,7 +44,7 @@ namespace BTLGame.Presentation
             }
 
             _current = prompt;
-            if (_title != null) _title.text = prompt.Title;
+            if (_title != null) { _title.text = prompt.Title; FitTitle(); }
             if (_message != null) _message.text = prompt.Message;
 
             ClearDynamicOptions();
@@ -67,14 +73,63 @@ namespace BTLGame.Presentation
                 button.onClick.AddListener(() => Submit(optionId));
             }
 
+            if (_popup != null)
+            {
+                _popup.Open();
+            }
+
+            FitOptionHeights(count);   // đo sau khi mở popup để bề rộng nút đã được layout tính
+
             if (_scroll != null)
             {
                 _scroll.verticalNormalizedPosition = 1f;
             }
 
-            if (_popup != null)
+        }
+
+        /// <summary>Tab tiêu đề giãn theo tên thẻ (tối đa gần bằng khung popup); dài hơn nữa thì best-fit co chữ.</summary>
+        private void FitTitle()
+        {
+            var header = _title.transform.parent as RectTransform;
+            var frame = header != null ? header.parent as RectTransform : null;
+            if (header == null || frame == null) return;
+
+            var settings = _title.GetGenerationSettings(Vector2.zero);
+            settings.resizeTextForBestFit = false;
+            settings.horizontalOverflow = HorizontalWrapMode.Overflow;
+            float textWidth = _title.cachedTextGeneratorForLayout.GetPreferredWidth(_title.text, settings) / _title.pixelsPerUnit;
+
+            float maxWidth = Mathf.Max(480f, frame.sizeDelta.x - 100f);
+            float headerWidth = Mathf.Clamp(textWidth + 120f, 480f, maxWidth);
+            header.sizeDelta = new Vector2(headerWidth, header.sizeDelta.y);
+            _title.rectTransform.sizeDelta = new Vector2(headerWidth - 60f, _title.rectTransform.sizeDelta.y);
+        }
+
+        /// <summary>Chữ dài tự xuống dòng; nút cao thêm vừa đủ để không dòng nào tràn khỏi nút (danh sách vẫn cuộn được).</summary>
+        private void FitOptionHeights(int count)
+        {
+            Canvas.ForceUpdateCanvases();
+            for (int i = 0; i < count && i < _optionLabels.Length; i++)
             {
-                _popup.Open();
+                var label = _optionLabels[i];
+                var element = _optionButtons[i].GetComponent<LayoutElement>();
+                if (label == null || element == null)
+                {
+                    continue;
+                }
+
+                float width = label.rectTransform.rect.width;
+                if (width <= 1f) width = 860f;   // chưa layout được: dùng bề rộng danh sách
+                var settings = label.GetGenerationSettings(new Vector2(width, 0f));
+                float textHeight = label.cachedTextGeneratorForLayout.GetPreferredHeight(label.text, settings) / label.pixelsPerUnit;
+                float height = Mathf.Max(MinOptionHeight, Mathf.Ceil(textHeight) + LabelPaddingTop + LabelPaddingBottom);
+                element.minHeight = height;
+                element.preferredHeight = height;
+            }
+
+            if (_scroll != null && _scroll.content != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(_scroll.content);
             }
         }
 

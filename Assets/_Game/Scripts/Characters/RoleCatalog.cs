@@ -32,7 +32,7 @@ namespace BtlGame.Characters
         private static readonly IReadOnlyList<RoleDefinition> Definitions = Array.AsReadOnly(new[]
         {
             new RoleDefinition(RoleId.Investor, "Nhà Đầu Tư",
-                "Giảm 10% giá mua bất động sản chưa có chủ từ ngân hàng; không giảm giá cưỡng chế.",
+                "Giảm 10% giá mua bất động sản chưa có chủ từ ngân hàng; không giảm giá mua lại.",
                 "Thêm 15% giảm cho lần mua tiếp theo từ ngân hàng, chờ đến khi dùng; cùng Passive giảm tổng 25%.", 5,
                 "Một lần/trận: mua từ xa thành phố đối thủ Cọc–Nhà 3 với 150% giá niêm yết, không trả thuê; không mua biển/Khách sạn.",
                 "Chi phí nâng cấp thường tăng 10%."),

@@ -10,7 +10,7 @@ namespace BtlGame.Core
         {
             if (buyer.Role != RoleId.Entrepreneur) return 20000;
             return State.Decisions.EntrepreneurForcedPurchaseBasisPoints ??
-                throw new InvalidOperationException("Cần xác nhận điểm yếu Doanh Nhân khi cưỡng chế.");
+                throw new InvalidOperationException("Cần xác nhận điểm yếu Doanh Nhân khi mua lại.");
         }
 
         private IReadOnlyList<LegalAction> QueryCardActions(PlayerState player)

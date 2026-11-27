@@ -87,7 +87,7 @@ namespace BTLGame.EditorTools
             tokensProp.arraySize = tokens.Length;
             for (int i = 0; i < tokens.Length; i++) tokensProp.GetArrayElementAtIndex(i).objectReferenceValue = tokens[i];
             so.FindProperty("_tokenLift").floatValue = SlabHeight + 0.14f;
-            so.FindProperty("_tokenSpread").floatValue = 0.5f;
+            so.FindProperty("_tokenSpread").floatValue = 0.45f;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -102,7 +102,7 @@ namespace BTLGame.EditorTools
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 go.name = "PlayerTokenSlot_" + i;
                 go.transform.SetParent(root, false);
-                go.transform.localScale = Vector3.one * 2.2f;
+                go.transform.localScale = Vector3.one * 2.5f;
                 result[i] = go.GetComponent<PlayerTokenView>();
             }
 
@@ -184,6 +184,16 @@ namespace BTLGame.EditorTools
                 var bodyRenderer = SceneKit.Primitive(PrimitiveType.Cube, "Body", tileGo.transform, new Vector3(0f, SlabHeight / 2f, 0f),
                     new Vector3(size.x - 0.08f, SlabHeight, size.y - 0.08f), SceneKit.Mat("Tile_" + hex, accent)).GetComponent<Renderer>();
 
+                // Bãi biển: nửa trong là biển (màu Body), nửa ngoài là cát vàng (nơi in chữ).
+                if (tile.Type == T.Beach)
+                {
+                    bool alongZ = Mathf.Abs(inward.y) > 0.5f;
+                    float half = ((alongZ ? size.y : size.x) - 0.08f) / 2f;
+                    var sandSize = alongZ ? new Vector3(size.x - 0.08f, 0.02f, half) : new Vector3(half, 0.02f, size.y - 0.08f);
+                    SceneKit.Primitive(PrimitiveType.Cube, "Sand", tileGo.transform,
+                        -inward3 * (half / 2f) + new Vector3(0f, SlabHeight + 0.006f, 0f), sandSize, SceneKit.Mat("TileBase_Sand", SandYellow));
+                }
+
                 if (corner)
                 {
                     AddCornerProp(tileGo.transform, tile.Type);
@@ -206,7 +216,7 @@ namespace BTLGame.EditorTools
                 if (tile.Type == T.City)
                 {
                     string[] names = { "Stake", "House1", "House2", "House3", "Hotel" };
-                    float[] heights = { 1.3f, 0.92f, 1.25f, 1.56f, 2.7f }; // = chiều cao thiết kế của prefab (BuildingPrefabBuilder), không bóp méo
+                    float[] heights = { 1.0f, 0.8f, 1.29f, 1.77f, 2.48f }; // chiều cao thiết kế x 1,15 cho MỌI cấp (cùng tỉ lệ ngang)
                     for (int k = 0; k < 5; k++)
                     {
                         var holder = SceneKit.Spawn(BuildingDir + "Building_" + names[k] + ".prefab", tileGo.transform,
@@ -224,6 +234,15 @@ namespace BTLGame.EditorTools
                 so.FindProperty("_tileId").intValue = id;
                 so.FindProperty("_bodyRenderer").objectReferenceValue = bodyRenderer;
                 so.FindProperty("_ownerMarker").objectReferenceValue = owner;
+                if (tile.Type == T.City) so.FindProperty("_festivalMarker").objectReferenceValue = BuildFestivalMarker(tileGo.transform, size, inward3);
+                if (tile.Type == T.Beach)
+                {
+                    var accents = new System.Collections.Generic.List<Renderer>();
+                    so.FindProperty("_ownerHut").objectReferenceValue = BuildBeachHut(tileGo.transform, inward3, accents);
+                    var accentProp = so.FindProperty("_ownerHutAccents");
+                    accentProp.arraySize = accents.Count;
+                    for (int k = 0; k < accents.Count; k++) accentProp.GetArrayElementAtIndex(k).objectReferenceValue = accents[k];
+                }
                 var stagesProp = so.FindProperty("_propertyStages");
                 stagesProp.arraySize = stages.Length;
                 for (int k = 0; k < stages.Length; k++) stagesProp.GetArrayElementAtIndex(k).objectReferenceValue = stages[k];
@@ -241,6 +260,77 @@ namespace BTLGame.EditorTools
         /// KHÔNG có chữ: Xuất phát = mũi tên chỉ chiều đi, Thẻ = vòng tròn nhiều màu, ba ô còn lại có mô hình 3D riêng.
         /// Thành phố chỉ có tên (không cờ). Ô cạnh trái/phải: chữ lệch ra ngoài, icon nằm trên dải màu phía trong.
         /// </summary>
+        /// <summary>Chòi bãi biển (sàn gỗ, 4 cột, mái bậc và cờ) đặt phía biển của ô; mái và cờ được tô theo màu chủ lúc chạy. Mặc định ẩn.</summary>
+        private static GameObject BuildBeachHut(Transform tile, Vector3 inward, System.Collections.Generic.List<Renderer> accents)
+        {
+            var hut = new GameObject("BeachHut").transform;
+            hut.SetParent(tile, false);
+            hut.localPosition = inward * 0.8f + new Vector3(0f, SlabHeight, 0f);
+
+            var wood = SceneKit.Mat("Hut_Wood", new Color(0.62f, 0.42f, 0.22f));
+            var roof = SceneKit.Mat("Hut_Roof", Color.white);
+            SceneKit.Primitive(PrimitiveType.Cube, "Floor", hut, new Vector3(0f, 0.1f, 0f), new Vector3(1.1f, 0.12f, 1.1f), wood);
+            foreach (var p in new[] { new Vector2(-0.42f, -0.42f), new Vector2(0.42f, -0.42f), new Vector2(-0.42f, 0.42f), new Vector2(0.42f, 0.42f) })
+                SceneKit.Primitive(PrimitiveType.Cylinder, "Post", hut, new Vector3(p.x, 0.5f, p.y), new Vector3(0.1f, 0.35f, 0.1f), wood);
+
+            // Mái ba bậc thu nhỏ dần, trên đỉnh có cột cờ.
+            float[] widths = { 1.35f, 0.95f, 0.55f };
+            for (int i = 0; i < widths.Length; i++)
+                accents.Add(SceneKit.Primitive(PrimitiveType.Cube, "Roof" + i, hut, new Vector3(0f, 0.92f + i * 0.17f, 0f),
+                    new Vector3(widths[i], 0.17f, widths[i]), roof).GetComponent<Renderer>());
+            SceneKit.Primitive(PrimitiveType.Cylinder, "Pole", hut, new Vector3(0f, 1.55f, 0f), new Vector3(0.06f, 0.2f, 0.06f), wood);
+            accents.Add(SceneKit.Primitive(PrimitiveType.Cube, "Flag", hut, new Vector3(0.18f, 1.65f, 0f), new Vector3(0.32f, 0.2f, 0.05f), roof).GetComponent<Renderer>());
+
+            hut.gameObject.SetActive(false);
+            return hut.gameObject;
+        }
+
+        /// <summary>Dấu thành phố lễ hội cố định: viền đèn đỏ–vàng quanh ô và chùm bóng bay ở góc phía trong. Mặc định ẩn.</summary>
+        private static GameObject BuildFestivalMarker(Transform tile, Vector2 size, Vector3 inward)
+        {
+            var marker = new GameObject("FestivalMarker").transform;
+            marker.SetParent(tile, false);
+
+            var red = SceneKit.Mat("Fest_Red", new Color(0.95f, 0.22f, 0.3f), 0.5f);
+            var gold = SceneKit.Mat("Fest_Gold", new Color(1f, 0.78f, 0.1f), 0.5f);
+            var pink = SceneKit.Mat("Fest_Pink", new Color(0.95f, 0.45f, 0.8f), 0.5f);
+            var cord = SceneKit.Mat("Fest_String", new Color(0.35f, 0.35f, 0.4f));
+
+            // Viền đèn: các chấm xen kẽ đỏ/vàng dọc bốn cạnh ô.
+            float halfX = size.x / 2f - 0.14f;
+            float halfZ = size.y / 2f - 0.14f;
+            int index = 0;
+            void Light(float x, float z)
+                => SceneKit.Primitive(PrimitiveType.Sphere, "Light", marker, new Vector3(x, SlabHeight + 0.07f, z), Vector3.one * 0.17f,
+                    index++ % 2 == 0 ? red : gold);
+            int alongX = Mathf.RoundToInt(halfX * 2f / 0.34f);
+            int alongZ = Mathf.RoundToInt(halfZ * 2f / 0.34f);
+            for (int i = 0; i <= alongX; i++) Light(-halfX + i * halfX * 2f / alongX, -halfZ);
+            for (int i = 1; i <= alongZ; i++) Light(halfX, -halfZ + i * halfZ * 2f / alongZ);
+            for (int i = 1; i <= alongX; i++) Light(halfX - i * halfX * 2f / alongX, halfZ);
+            for (int i = 1; i < alongZ; i++) Light(-halfX, halfZ - i * halfZ * 2f / alongZ);
+
+            // Chùm ba bóng bay ở góc phía trong (không che chữ ở phía ngoài).
+            bool alongZAxis = Mathf.Abs(inward.z) > 0.5f;
+            Vector3 side = alongZAxis ? Vector3.right : Vector3.forward;
+            float sideHalf = (alongZAxis ? size.x : size.y) / 2f;
+            Vector3 corner = inward * (Depth / 2f - 0.32f) + side * (sideHalf - 0.32f);
+            var offsets = new[] { new Vector3(-0.17f, 1.35f, 0f), new Vector3(0.17f, 1.5f, 0.05f), new Vector3(0f, 1.72f, -0.05f) };
+            var colors = new[] { red, gold, pink };
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                Vector3 top = corner + offsets[i] + new Vector3(0f, SlabHeight, 0f);
+                SceneKit.Primitive(PrimitiveType.Sphere, "Balloon", marker, top, new Vector3(0.34f, 0.42f, 0.34f), colors[i]);
+                Vector3 root = corner + new Vector3(0f, SlabHeight, 0f);
+                var line = SceneKit.Primitive(PrimitiveType.Cylinder, "String", marker, (top + root) / 2f,
+                    new Vector3(0.025f, (top - root).magnitude / 2f, 0.025f), cord);
+                line.transform.localRotation = Quaternion.FromToRotation(Vector3.up, top - root);
+            }
+
+            marker.gameObject.SetActive(false);
+            return marker.gameObject;
+        }
+
         private static void AddTileLabel(Transform labelCanvas, Tile tile, Vector2 c, Vector2 size, Vector2 inward)
         {
             Vector2 center = c * 100f;
@@ -270,16 +360,16 @@ namespace BTLGame.EditorTools
             if (vertical)
             {
                 textPos = center - inward * 28f;
-                textBox = new Vector2(140f, 90f);
+                textBox = new Vector2(190f, 120f);
             }
             else
             {
                 textPos = center - inward * 30f;
-                textBox = new Vector2(Mathf.Min(size.x * 100f, 190f) - 16f, 90f);
+                textBox = new Vector2(Mathf.Min(size.x * 100f, 200f) - 10f, 120f);
             }
 
             // Thành phố và bãi biển chỉ có tên (không cờ, không icon).
-            NewLabel(labelCanvas, "Name", tile.Name, Bold, 25, TextDark, textPos, textBox);
+            NewLabel(labelCanvas, "Name", tile.Name, Bold, 34, TextDark, textPos, textBox);
         }
 
         // ------------------------------------------------------------ mô hình 3D ở bốn góc
@@ -481,7 +571,6 @@ namespace BTLGame.EditorTools
             env.SetParent(root, false);
 
             SceneKit.Primitive(PrimitiveType.Cube, "Ground", env, new Vector3(0f, -0.25f, 0f), new Vector3(80f, 0.5f, 60f), SceneKit.Mat("Ground", new Color(0.5f, 0.8f, 0.42f)));
-            SceneKit.Primitive(PrimitiveType.Cube, "River", env, new Vector3(0f, -0.1f, 0f), new Vector3(27f, 0.2f, 27f), SceneKit.Mat("Water", new Color(0.3f, 0.72f, 0.95f), 0.9f));
 
             string[] props =
             {

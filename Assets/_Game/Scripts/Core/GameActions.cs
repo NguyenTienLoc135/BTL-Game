@@ -99,7 +99,7 @@ namespace BtlGame.Core
                 case GameActionKind.BuyCity: return "Mua " + tier + target;
                 case GameActionKind.BuyBeach: return "Mua bãi biển";
                 case GameActionKind.UpgradeCity: return "Nâng lên " + tier + target;
-                case GameActionKind.ForceBuyCity: return "Mua cưỡng chế" + target;
+                case GameActionKind.ForceBuyCity: return "Mua lại" + target;
                 case GameActionKind.SellProperty: return "Bán cho ngân hàng" + target;
                 case GameActionKind.SettleObligation: return "Thanh toán";
                 case GameActionKind.LiquidateProperty: return "Thanh lý" + target;

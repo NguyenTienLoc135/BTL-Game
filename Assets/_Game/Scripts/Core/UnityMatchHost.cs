@@ -20,6 +20,8 @@ namespace BtlGame.Core
         private static MatchSetupRequest _lastSetup;   // cấu hình trận đang/đã chơi, dùng cho "Chơi lại"
         private const float AutomaticEndTurnDelaySeconds = 0.75f;
         private IMatchResultUi _resultUi;
+        private ITilePickerUi _tilePicker;
+        private LegalAction[] _picking;   // lựa chọn đang chờ khi chọn ô trên bàn
         private MainMenuSetupController _menu;
         private IGameplayUi _ui;
         private BoardView _board;
@@ -64,6 +66,13 @@ namespace BtlGame.Core
             _ui.ActionRequested += OnHudAction;
             _ui.DecisionRequested += OnDecision;
             _ui.CardIntentRequested += OnCardIntent;
+            _tilePicker = FindTilePicker();
+            if (_tilePicker != null)
+            {
+                _tilePicker.TileChosen += OnTileChosen;
+                _tilePicker.SkipRequested += OnPickSkip;
+                _tilePicker.OtherActionsRequested += OnPickOtherActions;
+            }
             _resultUi = FindResultUi();
             if (_resultUi != null)
             {
@@ -71,7 +80,54 @@ namespace BtlGame.Core
                 _resultUi.MenuRequested += OnMenuRequested;
             }
             _board.PresentationCompleted += OnPresentationCompleted;
+            _board.ShowFestivalTiles(Match.QuerySnapshot().FixedFestivalCityIds);
             Refresh();
+        }
+
+        // ---------------------------------------------------------------- chọn ô trực tiếp (dịch chuyển)
+        private static ITilePickerUi FindTilePicker()
+        {
+            foreach (MonoBehaviour behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (behaviour is ITilePickerUi ui) return ui;
+            return null;
+        }
+
+        private void ShowTeleportPicker(IReadOnlyList<LegalAction> actions)
+        {
+            _popupId = ++_nextPopupId;   // đang chờ quyết định: chặn mở popup khác và thao tác HUD
+            _picking = actions.ToArray();
+            LegalAction[] jumps = _picking.Where(a => a.Kind == GameActionKind.Teleport).ToArray();
+            _tilePicker.ShowTilePicker("Dịch chuyển: bấm vào một ô đang nhấp nhô để bay tới — phí " + Money(jumps[0].Cost),
+                jumps.Select(a => a.TargetTileId.Value).ToArray(),
+                _picking.Any(a => a.Kind == GameActionKind.SkipLanding),
+                _picking.Any(a => a.Kind != GameActionKind.Teleport && a.Kind != GameActionKind.SkipLanding));
+        }
+
+        private void ClosePicker()
+        {
+            _tilePicker.HideTilePicker();
+            _picking = null;
+            _popupId = 0;
+        }
+
+        private void SubmitPick(LegalAction action)
+        {
+            if (action == null) return;
+            ClosePicker();
+            HandleResult(Match.SubmitDecision(action.ToCommand()), action.Kind == GameActionKind.Teleport);
+        }
+
+        private void OnTileChosen(int tileId)
+            => SubmitPick(_picking?.FirstOrDefault(a => a.Kind == GameActionKind.Teleport && a.TargetTileId == tileId));
+
+        private void OnPickSkip() => SubmitPick(_picking?.FirstOrDefault(a => a.Kind == GameActionKind.SkipLanding));
+
+        private void OnPickOtherActions()
+        {
+            if (_picking == null) return;
+            LegalAction[] others = _picking.Where(a => a.Kind != GameActionKind.Teleport && a.Kind != GameActionKind.SkipLanding).ToArray();
+            ClosePicker();
+            ShowOptions(others, true);   // có "Quay lại": đóng thì chế độ chọn ô hiện lại
         }
 
         private static IMatchResultUi FindResultUi()
@@ -341,6 +397,12 @@ namespace BtlGame.Core
             // KHÔNG được chèn vào menu tự hiện của lượt (xác nhận gieo, ô vừa tới, tù...). Thanh lý bắt buộc (LiquidateProperty) là luồng riêng.
             if (!localSelection) actions = actions.Where(a => a.Kind != GameActionKind.SellProperty).ToArray();
             if (_popupId != 0 || actions.Count == 0) return;
+            if (!localSelection && _tilePicker != null && actions.Any(a => a.Kind == GameActionKind.Teleport))
+            {
+                ShowTeleportPicker(actions);
+                return;
+            }
+
             _offered.Clear();
             var options = new List<DecisionOption>();
             for (int i = 0; i < actions.Count; i++)
@@ -404,7 +466,7 @@ namespace BtlGame.Core
             else Refresh();
         }
 
-        private void HandleResult(ActionResult result)
+        private void HandleResult(ActionResult result, bool fly = false)
         {
             _endTurnAt = 0f;
             if (result.Status == ActionStatus.Rejected) Debug.LogWarning(result.Message, this);
@@ -412,7 +474,7 @@ namespace BtlGame.Core
             {
                 GameSnapshot snapshot = Match.QuerySnapshot();
                 _board.PlayMovement(new MovementPresentation(snapshot.CurrentPlayerId, snapshot.CurrentActionId,
-                    snapshot.CurrentLandingId, result.Movement.Path));
+                    snapshot.CurrentLandingId, result.Movement.Path, fly));
                 RenderHud(snapshot);
             }
             else Refresh();
@@ -434,6 +496,12 @@ namespace BtlGame.Core
                 _ui.CardIntentRequested -= OnCardIntent;
             }
             if (_board != null) _board.PresentationCompleted -= OnPresentationCompleted;
+            if (_tilePicker != null)
+            {
+                _tilePicker.TileChosen -= OnTileChosen;
+                _tilePicker.SkipRequested -= OnPickSkip;
+                _tilePicker.OtherActionsRequested -= OnPickOtherActions;
+            }
             if (_resultUi != null)
             {
                 _resultUi.RestartRequested -= OnRestartRequested;
